@@ -1,0 +1,13 @@
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import CareerMatch from "./CareerMatch.jsx";
+import EmployerDashboard from "./EmployerDashboard.jsx";
+
+const path = window.location.pathname;
+const App = path.startsWith("/employer") ? EmployerDashboard : CareerMatch;
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
