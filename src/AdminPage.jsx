@@ -469,7 +469,7 @@ function CandidateDrawer({ candidate: c, onClose }) {
     agreeableness:     rawOcean.A ?? 0,
     neuroticism:       rawOcean.N ?? 0,
   };
-  console.log("[CandidateDrawer] ocean raw:", c.ocean, "normalized:", ocean);
+  console.log('OCEAN DEBUG', c.ocean, ocean);
   const roles = Array.isArray(c.roles) ? c.roles : [];
   const watchOuts = Array.isArray(c.watch_outs) ? c.watch_outs : (c.watch_outs ? [c.watch_outs] : []);
   const TABS = ["Profile", "Roles", "My Path", "Interview Prep"];
