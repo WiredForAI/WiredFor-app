@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -7,6 +8,9 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Rate limit: 10 assessment saves per IP per hour
+  if (rateLimit(req, res, "save-ans", 10, 3_600_000)) return;
 
   const { wfId, answers } = req.body;
 

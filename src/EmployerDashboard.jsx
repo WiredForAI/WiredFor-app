@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, authFetch } from "./supabaseClient";
 import { ARCHETYPES } from "./archetypes";
 
 function getCandidateArchetypeCategory(candidate) {
@@ -148,7 +148,7 @@ function CandidateDrawer({ candidate, role, onClose }) {
   const generateInsight = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await authFetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -393,7 +393,7 @@ function NewRolePanel({ employerId, onSaved, onClose }) {
     setGenError("");
     setGenerated(null);
     try {
-      const res = await fetch("/api/generate-role-ocean", {
+      const res = await authFetch("/api/generate-role-ocean", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -418,7 +418,7 @@ function NewRolePanel({ employerId, onSaved, onClose }) {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/save-role", {
+      const res = await authFetch("/api/save-role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -845,7 +845,7 @@ function RejectModal({ role, userId, onRejected, onClose }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin-reject", {
+      const res = await authFetch("/api/admin-reject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roleId: role.id, userId, reason: reason.trim() || null }),
@@ -927,7 +927,7 @@ function RoleDetailsDrawer({ role, userId, onApproved, onRejected, onClose }) {
     setApproving(true);
     setError("");
     try {
-      const res = await fetch("/api/admin-approve", {
+      const res = await authFetch("/api/admin-approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roleId: role.id, userId }),
@@ -1083,7 +1083,7 @@ function AdminQueueView({ userId }) {
   const [rejectTarget, setRejectTarget] = useState(null);
 
   useEffect(() => {
-    fetch(`/api/admin-queue?userId=${userId}`)
+    authFetch(`/api/admin-queue?userId=${userId}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error);
@@ -1195,7 +1195,7 @@ function AdminQueueView({ userId }) {
                       <>
                         <button
                           onClick={async () => {
-                            const res = await fetch("/api/admin-approve", {
+                            const res = await authFetch("/api/admin-approve", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ roleId: role.id, userId }),
@@ -1378,7 +1378,7 @@ function EmployerOnboarding({ userId, email, onComplete }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/employer-profile", {
+      const res = await authFetch("/api/employer-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, companyName: companyName.trim(), industry: industry || null, website: website.trim() || null }),
@@ -1515,7 +1515,7 @@ export default function EmployerDashboard() {
     setMatchLoading(true);
     setMatchError(null);
     setMatchedCandidates([]);
-    fetch("/api/match-candidates", {
+    authFetch("/api/match-candidates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roleId: activeRole.id }),
@@ -1538,13 +1538,13 @@ export default function EmployerDashboard() {
 
   const loadEmployerProfile = async (userId) => {
     try {
-      const res = await fetch(`/api/employer-profile?userId=${userId}`);
+      const res = await authFetch(`/api/employer-profile?userId=${userId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       if (data.isAdmin) {
         setIsAdmin(true);
         // Load pending count for badge
-        fetch(`/api/admin-queue?userId=${userId}`)
+        authFetch(`/api/admin-queue?userId=${userId}`)
           .then(r => r.json())
           .then(d => setPendingCount((d.roles || []).filter(r => r.status === "pending").length))
           .catch(() => {});
@@ -1563,7 +1563,7 @@ export default function EmployerDashboard() {
 
   const loadRoles = async (employerId) => {
     try {
-      const res = await fetch(`/api/employer-roles?employerId=${employerId}`);
+      const res = await authFetch(`/api/employer-roles?employerId=${employerId}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       const normalized = (data.roles || []).map(normalizeRole);

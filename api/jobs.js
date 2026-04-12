@@ -1,3 +1,5 @@
+import { rateLimit } from "./_lib/auth.js";
+
 // In-memory cache — persists across warm serverless invocations
 let cache = { jobs: null, timestamp: 0 };
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
@@ -346,6 +348,9 @@ Respond with ONLY this JSON (no extra text):
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Rate limit: 100 job searches per IP per day
+  if (rateLimit(req, res, "jobs", 100, 86_400_000)) return;
 
   const { ocean, archetype, operatingStyle, location, workPreference, resumeData } = req.body || {};
 

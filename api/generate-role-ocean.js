@@ -1,5 +1,12 @@
+import { getAuthUser, rateLimit } from "./_lib/auth.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const user = await getAuthUser(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  if (rateLimit(req, res, "gen-ocean", 50, 86_400_000)) return;
 
   const { title, team, description, workType, intake } = req.body;
   if (!title) return res.status(400).json({ error: "Missing title" });

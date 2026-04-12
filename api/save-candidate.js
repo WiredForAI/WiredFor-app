@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getAuthUser, rateLimit } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -13,10 +14,19 @@ async function upsertCandidate(payload) {
 }
 
 export default async function handler(req, res) {
-  // GET — fetch a candidate profile by userId (service role bypasses RLS)
+  // Rate limit: 10 saves per IP per hour
+  if (req.method === "POST" && rateLimit(req, res, "save-cand", 10, 3_600_000)) return;
+
+  // GET — fetch a candidate profile by userId
   if (req.method === "GET") {
     const { userId } = req.query;
     if (!userId) return res.status(400).json({ error: "Missing userId" });
+
+    // Verify caller is requesting their own data (or is admin)
+    const user = await getAuthUser(req);
+    if (!user || (user.id !== userId && user.email !== process.env.ADMIN_EMAIL)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const COLS = "wf_id, archetype, archetype_category, operating_style, ocean, roles, watch_outs, culture_fit, location, work_preference, career_clarity, growth_path, interview_intelligence, environments_to_avoid, resume_data, career_paths, has_completed_onboarding";
 

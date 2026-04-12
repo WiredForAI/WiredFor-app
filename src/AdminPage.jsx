@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, authFetch } from "./supabaseClient";
 import { ARCHETYPES } from "./archetypes";
 import { GuidedReveal } from "./CareerMatch.jsx";
 import { OceanRadarChart, OceanTraitBars } from "./OceanComponents.jsx";
@@ -225,7 +225,7 @@ function ConnectModal({ userId, employers, onClose, onSaved }) {
 
   useEffect(() => {
     if (!empId) { setRoles([]); setRoleId(""); return; }
-    fetch(`/api/employer-roles?employerId=${empId}`)
+    authFetch(`/api/employer-roles?employerId=${empId}`)
       .then(r => r.json())
       .then(d => setRoles(d.roles || []));
   }, [empId]);
@@ -233,7 +233,7 @@ function ConnectModal({ userId, employers, onClose, onSaved }) {
   const handleSave = async () => {
     if (!empId || !wfId.trim()) { setErr("Employer and Candidate WF-ID are required."); return; }
     setSaving(true); setErr("");
-    const res = await fetch("/api/admin", {
+    const res = await authFetch("/api/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "connect", userId, employerId: empId, roleId: roleId || null, candidateWfId: wfId.trim(), notes }),
@@ -311,7 +311,7 @@ function SimulateModal({ onClose, onSaved, onGenerated }) {
       const profile = buildSimProfile(selectedArchetype, experience, location.trim() || null);
 
       // Save to Supabase so it shows up in admin candidates list
-      const saveRes = await fetch("/api/save-candidate", {
+      const saveRes = await authFetch("/api/save-candidate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -469,7 +469,6 @@ function CandidateDrawer({ candidate: c, onClose }) {
     agreeableness:     rawOcean.A ?? 0,
     neuroticism:       rawOcean.N ?? 0,
   };
-  console.log('OCEAN DEBUG', c.ocean, ocean);
   const roles = Array.isArray(c.roles) ? c.roles : [];
   const watchOuts = Array.isArray(c.watch_outs) ? c.watch_outs : (c.watch_outs ? [c.watch_outs] : []);
   const TABS = ["Profile", "Roles", "My Path", "Interview Prep"];
@@ -926,7 +925,7 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
 
   const updateStatus = async (introId, status) => {
     setUpdating(introId);
-    await fetch("/api/admin", {
+    await authFetch("/api/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "update-intro", userId, introId, status }),
@@ -1128,10 +1127,10 @@ export default function AdminPage() {
     if (!uid) return;
     setLoading(true);
     const [statsRes, candRes, empRes, introRes] = await Promise.all([
-      fetch(`/api/admin?action=dash-stats&userId=${uid}`).then(r => r.json()),
-      fetch(`/api/admin?action=dash-candidates&userId=${uid}`).then(r => r.json()),
-      fetch(`/api/admin?action=dash-employers&userId=${uid}`).then(r => r.json()),
-      fetch(`/api/admin?action=dash-intros&userId=${uid}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-stats&userId=${uid}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-candidates&userId=${uid}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-employers&userId=${uid}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-intros&userId=${uid}`).then(r => r.json()),
     ]);
     setStats(statsRes);
     setCandidates(candRes.candidates || []);
@@ -1149,7 +1148,7 @@ export default function AdminPage() {
     setClearingTests(true);
     setClearMsg("");
     try {
-      const res  = await fetch("/api/admin", {
+      const res  = await authFetch("/api/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "clear-test-profiles", userId }),
@@ -1168,8 +1167,8 @@ export default function AdminPage() {
 
   const refreshIntros = async () => {
     const [introRes, statsRes] = await Promise.all([
-      fetch(`/api/admin?action=dash-intros&userId=${userId}`).then(r => r.json()),
-      fetch(`/api/admin?action=dash-stats&userId=${userId}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-intros&userId=${userId}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-stats&userId=${userId}`).then(r => r.json()),
     ]);
     setIntros(introRes.intros || []);
     setStats(statsRes);

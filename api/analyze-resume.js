@@ -1,5 +1,14 @@
+import { getAuthUser, rateLimit } from "./_lib/auth.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Require authenticated user for resume analysis
+  const user = await getAuthUser(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  // Rate limit: 10 resume analyses per IP per hour
+  if (rateLimit(req, res, "resume", 10, 3_600_000)) return;
 
   const { fileBase64, fileType, ocean, archetype, operatingStyle } = req.body || {};
 

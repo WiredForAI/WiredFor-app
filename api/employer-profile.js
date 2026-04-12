@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getAuthUser } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -6,10 +7,19 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Require authentication for all employer operations
+  const user = await getAuthUser(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
   // ── POST: create/update employer profile ───────────────────────────────────
   if (req.method === "POST") {
     const { userId, companyName, industry, website } = req.body;
     if (!userId || !companyName) return res.status(400).json({ error: "Missing required fields" });
+
+    // Verify caller owns this profile
+    if (user.id !== userId && user.email !== process.env.ADMIN_EMAIL) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const { data, error } = await supabase
       .from("employers")

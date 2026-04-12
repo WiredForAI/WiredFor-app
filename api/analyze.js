@@ -1,5 +1,10 @@
+import { rateLimit } from "./_lib/auth.js";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Rate limit: 100 API calls per IP per day
+  if (rateLimit(req, res, "analyze", 100, 86_400_000)) return;
 
   const { model, max_tokens, messages } = req.body;
   if (!messages) return res.status(400).json({ error: "Missing messages" });

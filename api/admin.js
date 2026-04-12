@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -22,18 +23,17 @@ function computeCompleteness(role) {
   ));
 }
 
-async function verifyAdmin(userId) {
-  const { data } = await supabase.auth.admin.getUserById(userId);
-  return data?.user?.email === process.env.ADMIN_EMAIL;
-}
-
 export default async function handler(req, res) {
+  // All admin endpoints require server-side auth token verification
+  const admin = await requireAdmin(req, res);
+  if (!admin) return;
+
   const action = req.query.action || req.body?.action;
 
   // ── GET queue ──────────────────────────────────────────────────────────────
   if (req.method === "GET" && action === "queue") {
     const { userId } = req.query;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const { data: roles, error } = await supabase
       .from("employer_roles")
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
   // ── GET dash-stats ─────────────────────────────────────────────────────────
   if (req.method === "GET" && action === "dash-stats") {
     const { userId } = req.query;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const [
       { count: candidates },
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
   // ── GET dash-candidates ────────────────────────────────────────────────────
   if (req.method === "GET" && action === "dash-candidates") {
     const { userId } = req.query;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const { data, error } = await supabase
       .from("candidates")
@@ -134,7 +134,7 @@ export default async function handler(req, res) {
   // ── GET dash-employers ─────────────────────────────────────────────────────
   if (req.method === "GET" && action === "dash-employers") {
     const { userId } = req.query;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const { data: employers, error } = await supabase
       .from("employers")
@@ -174,7 +174,7 @@ export default async function handler(req, res) {
   // ── GET dash-intros ────────────────────────────────────────────────────────
   if (req.method === "GET" && action === "dash-intros") {
     const { userId } = req.query;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const { data, error } = await supabase
       .from("intros")
@@ -200,7 +200,7 @@ export default async function handler(req, res) {
   // ── POST connect ───────────────────────────────────────────────────────────
   if (req.method === "POST" && action === "connect") {
     const { userId, employerId, roleId, candidateWfId, notes } = req.body;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
     if (!employerId || !candidateWfId) return res.status(400).json({ error: "Missing required fields" });
 
     const { data, error } = await supabase
@@ -222,7 +222,7 @@ export default async function handler(req, res) {
   // ── POST update-intro ──────────────────────────────────────────────────────
   if (req.method === "POST" && action === "update-intro") {
     const { userId, introId, status } = req.body;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
     if (!introId || !status) return res.status(400).json({ error: "Missing required fields" });
 
     const { error } = await supabase
@@ -237,7 +237,7 @@ export default async function handler(req, res) {
   // ── POST clear-test-profiles ──────────────────────────────────────────────
   if (req.method === "POST" && action === "clear-test-profiles") {
     const { userId } = req.body;
-    if (!userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    // Auth verified at handler entry
 
     const { error, count } = await supabase
       .from("candidates")

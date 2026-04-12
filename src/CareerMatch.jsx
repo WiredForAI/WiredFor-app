@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, authFetch } from "./supabaseClient";
 import AuthScreen from "./AuthScreen";
 import { assignArchetype, ARCHETYPES } from "./archetypes";
 import { OceanRadarChart, OceanTraitBars, OCEAN_COLORS } from "./OceanComponents.jsx";
@@ -1282,7 +1282,7 @@ export default function CareerMatch() {
 
       let candidate = null;
       try {
-        const res = await fetch(`/api/save-candidate?userId=${encodeURIComponent(session.user.id)}`);
+        const res = await authFetch(`/api/save-candidate?userId=${encodeURIComponent(session.user.id)}`);
         const json = await res.json();
         candidate = json.candidate || null;
       } catch (err) {
@@ -1394,7 +1394,7 @@ export default function CareerMatch() {
     reader.onload = async (ev) => {
       const base64 = ev.target.result.split(",")[1];
       try {
-        const res = await fetch("/api/analyze-resume", {
+        const res = await authFetch("/api/analyze-resume", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1438,7 +1438,7 @@ export default function CareerMatch() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        fetch("/api/save-candidate", {
+        authFetch("/api/save-candidate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1476,7 +1476,7 @@ export default function CareerMatch() {
         if (!stored) { console.error("No localStorage backup found for", wfid); return; }
         const res = JSON.parse(stored);
 
-        const response = await fetch("/api/save-candidate", {
+        const response = await authFetch("/api/save-candidate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1515,7 +1515,7 @@ export default function CareerMatch() {
   const markOnboardingComplete = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;
-      fetch("/api/save-candidate", {
+      authFetch("/api/save-candidate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1585,7 +1585,7 @@ export default function CareerMatch() {
   };
 
   const saveAnswersProgress = (currentAnswers) => {
-    fetch("/api/save-answers", {
+    authFetch("/api/save-answers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wfId, answers: currentAnswers }),
@@ -1742,7 +1742,7 @@ Rules:
 - Do NOT include an "archetype" or "operatingStyle" field — those are assigned separately by the framework`;
 
     try {
-      const response = await fetch("/api/analyze", {
+      const response = await authFetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
