@@ -1214,47 +1214,68 @@ export default function AdminPage() {
         </div>
 
         {/* Simulation toolbar */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12, marginBottom: 28,
+        <div className="wf-sim-toolbar" style={{
+          marginBottom: 28,
           padding: "14px 18px",
           background: "rgba(107,79,255,0.03)",
           border: `1px solid rgba(107,79,255,0.12)`,
           borderRadius: 12,
-          flexWrap: "wrap",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+          <style>{`
+            .wf-sim-toolbar .wf-sim-row {
+              display: flex; align-items: center; gap: 12;
+            }
+            .wf-sim-toolbar .wf-sim-buttons {
+              display: flex; align-items: center; gap: 10; margin-left: auto;
+            }
+            .wf-sim-toolbar .wf-sim-subtitle {
+              font-size: 12px; color: #9B9B9B; margin-top: 8px;
+            }
+            @media (max-width: 768px) {
+              .wf-sim-toolbar .wf-sim-row {
+                flex-direction: column; align-items: stretch; gap: 12px;
+              }
+              .wf-sim-toolbar .wf-sim-buttons {
+                flex-direction: column; margin-left: 0;
+              }
+              .wf-sim-toolbar .wf-sim-buttons button {
+                width: 100% !important;
+              }
+            }
+          `}</style>
+          <div className="wf-sim-row">
             <span style={{
               fontSize: 9, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase",
               color: "#F59E0B", background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)",
-              padding: "3px 8px", borderRadius: 4, flexShrink: 0,
+              padding: "3px 8px", borderRadius: 4, flexShrink: 0, alignSelf: "flex-start",
             }}>Test Mode</span>
-            <span style={{ fontSize: 13, color: MUTED, fontFamily: SANS }}>
-              Simulate a candidate profile to preview the full experience flow
-            </span>
+            <div className="wf-sim-buttons">
+              {clearMsg && (
+                <span style={{ fontSize: 12, color: clearMsg.startsWith("Error") ? ORANGE : ACCENT, fontFamily: SANS }}>{clearMsg}</span>
+              )}
+              <button
+                onClick={handleClearTests}
+                disabled={clearingTests}
+                style={{
+                  ...ghostBtn,
+                  fontSize: 12,
+                  color: clearingTests ? MUTED2 : "#DC2626",
+                  borderColor: clearingTests ? BORDER : "rgba(220,38,38,0.25)",
+                  opacity: clearingTests ? 0.6 : 1,
+                }}
+              >
+                {clearingTests ? "Clearing…" : "Clear Test Profiles"}
+              </button>
+              <button
+                onClick={() => setShowSimulate(true)}
+                style={{ ...primaryBtn, background: PURPLE, fontSize: 13 }}
+              >
+                + Simulate Assessment
+              </button>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {clearMsg && (
-              <span style={{ fontSize: 12, color: clearMsg.startsWith("Error") ? ORANGE : ACCENT, fontFamily: SANS }}>{clearMsg}</span>
-            )}
-            <button
-              onClick={handleClearTests}
-              disabled={clearingTests}
-              style={{
-                ...ghostBtn,
-                fontSize: 12,
-                color: clearingTests ? MUTED2 : "#DC2626",
-                borderColor: clearingTests ? BORDER : "rgba(220,38,38,0.25)",
-                opacity: clearingTests ? 0.6 : 1,
-              }}
-            >
-              {clearingTests ? "Clearing…" : "Clear Test Profiles"}
-            </button>
-            <button
-              onClick={() => setShowSimulate(true)}
-              style={{ ...primaryBtn, background: PURPLE, fontSize: 13 }}
-            >
-              + Simulate Assessment
-            </button>
+          <div className="wf-sim-subtitle" style={{ fontSize: 12, color: MUTED, fontFamily: SANS, marginTop: 8 }}>
+            Simulate a candidate profile to preview the full experience flow
           </div>
         </div>
 

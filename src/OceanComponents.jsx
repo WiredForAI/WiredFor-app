@@ -20,11 +20,11 @@ const OCEAN_SHORT = {
 
 export function OceanRadarChart({ ocean, size = 220 }) {
   if (!ocean) return null;
-  // Use a larger viewBox for label padding, keep the outer size the same
-  const vb = 320;
-  const cx = vb / 2;
-  const cy = vb / 2;
-  const r = vb * 0.28;
+  // 340x340 viewBox with generous label padding around the pentagon
+  const vb = 340;
+  const cx = 170;
+  const cy = 170;
+  const r = 80; // polygon radius — keeps pentagon same visual size
   const angleStep = (2 * Math.PI) / 5;
   const startAngle = -Math.PI / 2;
 
@@ -57,14 +57,14 @@ export function OceanRadarChart({ ocean, size = 220 }) {
         {dataPoints.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r={4} fill={OCEAN_COLORS[traits[i]]} />
         ))}
-        {/* Labels */}
+        {/* Labels — pushed well beyond pentagon edge with full trait names */}
         {traits.map((t, i) => {
-          const label = pointAt(i, 130);
+          const label = pointAt(i, 140);
           const anchor = label.x < cx - 4 ? "end" : label.x > cx + 4 ? "start" : "middle";
-          const dy = label.y < cy - 4 ? -4 : label.y > cy + 4 ? 14 : 5;
+          const dy = label.y < cy - 4 ? -6 : label.y > cy + 4 ? 16 : 5;
           return (
             <text key={t} x={label.x} y={label.y + dy} textAnchor={anchor}
-              style={{ fontSize: 12, fill: OCEAN_COLORS[t], fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+              style={{ fontSize: 11, fill: OCEAN_COLORS[t], fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
               {OCEAN_SHORT[t]}
             </text>
           );
