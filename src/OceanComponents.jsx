@@ -40,7 +40,7 @@ export function OceanRadarChart({ ocean, size = 220 }) {
 
   return (
     <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} style={{ maxWidth: "100%" }}>
+      <svg viewBox={`0 0 ${vb} ${vb}`} style={{ width: "100%", maxWidth: 300 }}>
         {/* Grid rings */}
         {gridRings.map(pct => {
           const pts = traits.map((_, i) => pointAt(i, pct));
