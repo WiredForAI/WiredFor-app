@@ -10,11 +10,21 @@ const OCEAN_LABELS = {
 
 const OCEAN_ORDER = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"];
 
+const OCEAN_SHORT = {
+  openness: "Open",
+  conscientiousness: "C'ness",
+  extraversion: "Extravert",
+  agreeableness: "Agreeable",
+  neuroticism: "Neuro",
+};
+
 export function OceanRadarChart({ ocean, size = 220 }) {
   if (!ocean) return null;
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size * 0.38;
+  // Use a larger viewBox for label padding, keep the outer size the same
+  const vb = 320;
+  const cx = vb / 2;
+  const cy = vb / 2;
+  const r = vb * 0.28;
   const angleStep = (2 * Math.PI) / 5;
   const startAngle = -Math.PI / 2;
 
@@ -30,7 +40,7 @@ export function OceanRadarChart({ ocean, size = 220 }) {
 
   return (
     <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ maxWidth: "100%" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} style={{ maxWidth: "100%" }}>
         {/* Grid rings */}
         {gridRings.map(pct => {
           const pts = traits.map((_, i) => pointAt(i, pct));
@@ -49,13 +59,13 @@ export function OceanRadarChart({ ocean, size = 220 }) {
         ))}
         {/* Labels */}
         {traits.map((t, i) => {
-          const label = pointAt(i, 122);
+          const label = pointAt(i, 130);
           const anchor = label.x < cx - 4 ? "end" : label.x > cx + 4 ? "start" : "middle";
-          const dy = label.y < cy - 4 ? -2 : label.y > cy + 4 ? 12 : 4;
+          const dy = label.y < cy - 4 ? -4 : label.y > cy + 4 ? 14 : 5;
           return (
             <text key={t} x={label.x} y={label.y + dy} textAnchor={anchor}
-              style={{ fontSize: 10, fill: OCEAN_COLORS[t], fontWeight: 600, textTransform: "capitalize", fontFamily: "'DM Sans', sans-serif" }}>
-              {t.slice(0, 1).toUpperCase() + t.slice(1)}
+              style={{ fontSize: 12, fill: OCEAN_COLORS[t], fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+              {OCEAN_SHORT[t]}
             </text>
           );
         })}
