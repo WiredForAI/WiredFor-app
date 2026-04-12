@@ -530,6 +530,7 @@ function ResumeUploadBlock({ resumeData, resumeUploading, resumeError, resumeFil
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: textColor, marginBottom: 4 }}>Upload your resume</div>
             <div style={{ fontSize: 13, color: subColor }}>PDF or text · under 5MB · unlocks career paths</div>
+            <div style={{ fontSize: 11, color: subColor, marginTop: 6, opacity: 0.7 }}>Your resume is analyzed and immediately discarded. Only a summary of your experience is saved — your actual resume file is never stored on our servers.</div>
           </div>
         </label>
       )}
