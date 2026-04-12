@@ -1,4 +1,4 @@
-import { rateLimit } from "./_lib/auth.js";
+import { rateLimit, cors } from "./_lib/auth.js";
 
 // In-memory cache — persists across warm serverless invocations
 let cache = { jobs: null, timestamp: 0 };
@@ -143,7 +143,15 @@ function dedupKey(job) {
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
+const ALLOWED_JOB_DOMAINS = ["remotive.com", "www.arbeitnow.com", "www.themuse.com", "findwork.dev", "api.anthropic.com"];
+
 async function fetchWithTimeout(url, ms = 7000) {
+  // SSRF protection: only allow whitelisted domains
+  const hostname = new URL(url).hostname;
+  if (!ALLOWED_JOB_DOMAINS.includes(hostname)) {
+    console.error(`Blocked fetch to non-whitelisted domain: ${hostname}`);
+    return null;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -347,6 +355,7 @@ Respond with ONLY this JSON (no extra text):
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
+  if (cors(req, res)) return;
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   // Rate limit: 100 job searches per IP per day

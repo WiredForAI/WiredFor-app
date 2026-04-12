@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { requireAdmin } from "./_lib/auth.js";
+import { requireAdmin, cors } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -25,6 +25,7 @@ function computeCompleteness(role) {
 
 export default async function handler(req, res) {
   // All admin endpoints require server-side auth token verification
+  if (cors(req, res)) return;
   const admin = await requireAdmin(req, res);
   if (!admin) return;
 

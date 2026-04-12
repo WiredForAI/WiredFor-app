@@ -1,6 +1,7 @@
-import { rateLimit } from "./_lib/auth.js";
+import { rateLimit, cors } from "./_lib/auth.js";
 
 export default async function handler(req, res) {
+  if (cors(req, res)) return;
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   // Rate limit: 100 API calls per IP per day

@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getAuthUser } from "./_lib/auth.js";
+import { getAuthUser, cors } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (cors(req, res)) return;
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   // Require authenticated user

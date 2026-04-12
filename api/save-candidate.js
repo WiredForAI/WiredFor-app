@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getAuthUser, rateLimit } from "./_lib/auth.js";
+import { getAuthUser, rateLimit, cors, findDangerousContent, validateOcean, isValidEmail } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -14,6 +14,7 @@ async function upsertCandidate(payload) {
 }
 
 export default async function handler(req, res) {
+  if (cors(req, res)) return;
   // Rate limit: 10 saves per IP per hour
   if (req.method === "POST" && rateLimit(req, res, "save-cand", 10, 3_600_000)) return;
 
@@ -70,6 +71,15 @@ export default async function handler(req, res) {
     careerClarity, growthPath, interviewIntelligence, environmentsToAvoid,
     resumeData, careerPaths, hasCompletedOnboarding,
   } = req.body;
+
+  // Input validation
+  const dangerous = findDangerousContent(req.body);
+  if (dangerous) return res.status(400).json({ error: "Invalid input detected" });
+  if (email && !isValidEmail(email)) return res.status(400).json({ error: "Invalid email format" });
+  if (ocean && !hasCompletedOnboarding) {
+    const oceanErr = validateOcean(ocean);
+    if (oceanErr) return res.status(400).json({ error: oceanErr });
+  }
 
   // hasCompletedOnboarding-only update (partial upsert — no archetype/ocean required)
   if (wfId && hasCompletedOnboarding === true && !archetype) {

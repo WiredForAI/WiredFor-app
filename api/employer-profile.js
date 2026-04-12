@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { getAuthUser } from "./_lib/auth.js";
+import { getAuthUser, cors } from "./_lib/auth.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -7,6 +7,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (cors(req, res)) return;
   // Require authentication for all employer operations
   const user = await getAuthUser(req);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
