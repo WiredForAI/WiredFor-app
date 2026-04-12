@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /assessment
+Disallow: /admin
+Disallow: /employer
+Disallow: /preview
+Disallow: /api/
