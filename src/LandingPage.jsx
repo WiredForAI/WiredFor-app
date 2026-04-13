@@ -365,11 +365,11 @@ function ProfileCardCarousel() {
 // ── Product section mock UI ───────────────────────────────────────────────
 function MockCandidateResult() {
   const ocean = [
-    { label: "Openness",          val: 87, color: "#00C4A8" },
-    { label: "Conscientiousness", val: 72, color: "#6B4FFF" },
-    { label: "Extraversion",      val: 31, color: "#F55D2C" },
-    { label: "Agreeableness",     val: 64, color: "#FFBE0B" },
-    { label: "Neuroticism",       val: 28, color: "#FF6B89" },
+    { label: "Openness",          val: 86, color: "#00C4A8" },
+    { label: "Conscientiousness", val: 83, color: "#6B4FFF" },
+    { label: "Extraversion",      val: 23, color: "#F55D2C" },
+    { label: "Agreeableness",     val: 50, color: "#FFB800" },
+    { label: "Neuroticism",       val: 28, color: "#FF3CAC" },
   ];
   return (
     <div style={{
@@ -381,17 +381,21 @@ function MockCandidateResult() {
           background: "rgba(0,196,168,0.10)", border: "1px solid rgba(0,196,168,0.25)",
           borderRadius: 6, padding: "3px 9px",
           fontSize: 10, fontWeight: 600, color: T.teal, fontFamily: T.sans,
-        }}>Your Profile</div>
+        }}>Matched</div>
         <div style={{ fontFamily: "monospace", fontSize: 11, color: T.t3 }}>WF-4X2K9M</div>
       </div>
-      <div style={{ fontFamily: T.serif, fontSize: 20, color: T.t1, marginBottom: 4, letterSpacing: "-0.5px" }}>
-        Deep Systems Thinker
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <div style={{ fontFamily: T.serif, fontSize: 20, color: T.t1, letterSpacing: "-0.5px" }}>
+          The Architect
+        </div>
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B4FFF", background: "rgba(107,79,255,0.08)", padding: "3px 8px", borderRadius: 10 }}>Builder</span>
       </div>
+      <div style={{ fontSize: 13, color: T.teal, fontStyle: "italic", marginBottom: 4, fontFamily: T.sans }}>Designs complex systems that outlast the moment</div>
       <div style={{ fontSize: 12, color: T.t2, fontFamily: T.sans, marginBottom: 16, lineHeight: 1.5 }}>
-        You thrive in ownership-heavy, low-ambiguity environments
+        Systems thinker · Deep focus · High ownership
       </div>
       <div style={{ height: 1, background: T.border, marginBottom: 14 }} />
-      <div style={{ fontSize: 10, color: T.t3, letterSpacing: "0.09em", textTransform: "uppercase", fontFamily: T.sans, fontWeight: 600, marginBottom: 10 }}>OCEAN Profile</div>
+      <div style={{ fontSize: 10, color: T.t3, letterSpacing: "0.09em", textTransform: "uppercase", fontFamily: T.sans, fontWeight: 600, marginBottom: 10 }}>Personality Profile</div>
       {ocean.map(({ label, val, color }) => (
         <div key={label} style={{ marginBottom: 7 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
@@ -404,9 +408,9 @@ function MockCandidateResult() {
         </div>
       ))}
       <div style={{ height: 1, background: T.border, margin: "14px 0 12px" }} />
-      <div style={{ fontSize: 10, color: T.t3, letterSpacing: "0.09em", textTransform: "uppercase", fontFamily: T.sans, fontWeight: 600, marginBottom: 8 }}>Matched Roles</div>
+      <div style={{ fontSize: 10, color: T.t3, letterSpacing: "0.09em", textTransform: "uppercase", fontFamily: T.sans, fontWeight: 600, marginBottom: 8 }}>Top Matched Roles</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {["Product Manager", "Technical PM", "Eng Lead"].map(r => (
+        {["Staff Engineer", "Platform Engineer", "Solutions Architect"].map(r => (
           <span key={r} style={{
             fontSize: 11, color: T.t1, fontFamily: T.sans, fontWeight: 500,
             background: "rgba(0,0,0,0.04)", border: `1px solid ${T.border}`,
@@ -420,9 +424,9 @@ function MockCandidateResult() {
 
 function MockEmployerDash() {
   const candidates = [
-    { id: "4X2K9M", arch: "Deep Systems Thinker", fit: 94, tags: ["High openness", "Low extraversion"],   fitColor: "#00C4A8" },
-    { id: "2P9RVN", arch: "The Builder",           fit: 87, tags: ["High conscientiousness", "Direct"],    fitColor: "#6B4FFF" },
-    { id: "8L3WZX", arch: "The Analyst",           fit: 76, tags: ["Systematic", "Detail-oriented"],       fitColor: "#F55D2C" },
+    { id: "4X2K9M", arch: "The Architect", category: "Builder",    fit: 94, tags: ["Systems thinker", "Deep focus"],      fitColor: "#00C4A8" },
+    { id: "7R9LPQ", arch: "The Visionary", category: "Leader",     fit: 91, tags: ["Big-picture", "People energized"],    fitColor: "#6B4FFF" },
+    { id: "M3XTBK", arch: "The Maven",     category: "Specialist", fit: 87, tags: ["Deep expertise", "Mastery-driven"],   fitColor: "#F55D2C" },
   ];
   return (
     <div style={{
@@ -449,6 +453,7 @@ function MockEmployerDash() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: T.t1, fontFamily: T.sans }}>{c.arch}</span>
+              {c.category && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B4FFF", background: "rgba(107,79,255,0.08)", padding: "2px 6px", borderRadius: 8 }}>{c.category}</span>}
               <span style={{ fontSize: 10, color: T.t3, fontFamily: "monospace" }}>WF-{c.id}</span>
             </div>
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
