@@ -177,45 +177,51 @@ function TrustPillar({ icon, title, body }) {
 const PROFILES = [
   {
     wfId: "WF-4X2K9M",
-    archetype: "Deep Systems Thinker",
-    tags: "High ownership · Systems-first · Low extraversion",
+    archetype: "The Architect",
+    category: "Builder",
+    tagline: "Designs complex systems that outlast the moment",
+    tags: "Systems thinker · Deep focus · High ownership",
     glow: "rgba(0,196,168,0.10)",
     ocean: [
-      { label: "Openness",          val: 87, color: "#00C4A8" },
-      { label: "Conscientiousness", val: 72, color: "#6B4FFF" },
-      { label: "Extraversion",      val: 31, color: "#F55D2C" },
-      { label: "Agreeableness",     val: 64, color: "#FFBE0B" },
-      { label: "Neuroticism",       val: 28, color: "#FF6B89" },
+      { label: "Openness",          val: 86, color: "#00C4A8" },
+      { label: "Conscientiousness", val: 83, color: "#6B4FFF" },
+      { label: "Extraversion",      val: 23, color: "#F55D2C" },
+      { label: "Agreeableness",     val: 50, color: "#FFB800" },
+      { label: "Neuroticism",       val: 28, color: "#FF3CAC" },
     ],
-    roles: ["Product Manager", "Technical Program Mgr", "Engineering Lead"],
+    roles: ["Staff Engineer", "Platform Engineer", "Solutions Architect"],
   },
   {
     wfId: "WF-7R9LPQ",
-    archetype: "Empathic Visionary",
-    tags: "People-first · Big-picture · High openness",
+    archetype: "The Visionary",
+    category: "Leader",
+    tagline: "Sees the future before anyone else",
+    tags: "Big-picture · People energized · Low neuroticism",
     glow: "rgba(107,79,255,0.08)",
     ocean: [
       { label: "Openness",          val: 91, color: "#00C4A8" },
       { label: "Conscientiousness", val: 58, color: "#6B4FFF" },
-      { label: "Extraversion",      val: 74, color: "#F55D2C" },
-      { label: "Agreeableness",     val: 88, color: "#FFBE0B" },
-      { label: "Neuroticism",       val: 45, color: "#FF6B89" },
+      { label: "Extraversion",      val: 79, color: "#F55D2C" },
+      { label: "Agreeableness",     val: 64, color: "#FFB800" },
+      { label: "Neuroticism",       val: 31, color: "#FF3CAC" },
     ],
-    roles: ["UX Researcher", "Product Designer", "Customer Success Lead"],
+    roles: ["Product Manager", "Head of Product", "Chief of Staff"],
   },
   {
     wfId: "WF-M3XTBK",
-    archetype: "Precise Executor",
-    tags: "Structure-lover · Detail-oriented · High conscientiousness",
+    archetype: "The Maven",
+    category: "Specialist",
+    tagline: "Knows more about their domain than almost anyone",
+    tags: "Deep expertise · Mastery-driven · Independent",
     glow: "rgba(245,93,44,0.07)",
     ocean: [
-      { label: "Openness",          val: 44, color: "#00C4A8" },
-      { label: "Conscientiousness", val: 94, color: "#6B4FFF" },
-      { label: "Extraversion",      val: 38, color: "#F55D2C" },
-      { label: "Agreeableness",     val: 67, color: "#FFBE0B" },
-      { label: "Neuroticism",       val: 32, color: "#FF6B89" },
+      { label: "Openness",          val: 78, color: "#00C4A8" },
+      { label: "Conscientiousness", val: 88, color: "#6B4FFF" },
+      { label: "Extraversion",      val: 31, color: "#F55D2C" },
+      { label: "Agreeableness",     val: 42, color: "#FFB800" },
+      { label: "Neuroticism",       val: 26, color: "#FF3CAC" },
     ],
-    roles: ["DevOps Engineer", "QA Lead", "Security Analyst"],
+    roles: ["Security Engineer", "ML Researcher", "Database Architect"],
   },
 ];
 
@@ -272,9 +278,19 @@ function ProfileCardCarousel() {
 
             {/* Archetype */}
             <div style={{ marginBottom: 20, position: "relative" }}>
-              <div style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 400, color: T.t1, marginBottom: 5, letterSpacing: "-0.5px" }}>
-                {p.archetype}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                <div style={{ fontFamily: T.serif, fontSize: 21, fontWeight: 400, color: T.t1, letterSpacing: "-0.5px" }}>
+                  {p.archetype}
+                </div>
+                {p.category && (
+                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B4FFF", background: "rgba(107,79,255,0.08)", padding: "3px 8px", borderRadius: 10 }}>
+                    {p.category}
+                  </span>
+                )}
               </div>
+              {p.tagline && (
+                <div style={{ fontSize: 13, color: T.teal, fontStyle: "italic", marginBottom: 5, fontFamily: T.sans }}>{p.tagline}</div>
+              )}
               <div style={{ fontSize: 12, color: T.t2, fontFamily: T.sans, lineHeight: 1.55 }}>{p.tags}</div>
             </div>
 
@@ -1007,7 +1023,7 @@ export default function LandingPage() {
             <TrustPillar
               icon="🔒"
               title="Anonymous by Default"
-              body="Every candidate gets a unique WF-ID. Your name, resume, and contact information are never shared without your explicit consent. Your resume is stored privately and never shared with employers without your explicit consent."
+              body="Every candidate gets a unique WF-ID. Your name, resume, and contact information are never shared without your explicit consent. Your resume is analyzed and immediately discarded — only a summary of your experience is saved. Your actual resume file is never stored on our servers."
             />
             <TrustPillar
               icon="🧠"
