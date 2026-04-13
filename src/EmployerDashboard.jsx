@@ -1296,7 +1296,14 @@ function EmployerAuth({ onComplete }) {
         borderRadius: 20, padding: "40px 36px", boxShadow: SHADOW,
       }}>
         <div style={{ marginBottom: 32 }}>
-          <div style={{ fontFamily: SERIF, fontSize: 26, color: TEXT, marginBottom: 6 }}>WiredFor.ai</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <svg viewBox="0 0 48 48" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="48" height="48" rx="12" fill="#0A0A0A"/>
+              <circle cx="8" cy="13" r="4" fill="#00C4A8"/><circle cx="18" cy="35" r="3" fill="#6B4FFF"/><circle cx="24" cy="22" r="3.5" fill="#00C4A8"/><circle cx="30" cy="35" r="3" fill="#6B4FFF"/><circle cx="40" cy="13" r="4" fill="#00C4A8"/>
+              <line x1="8" y1="13" x2="18" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="35" x2="24" y2="22" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="24" y1="22" x2="30" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="30" y1="35" x2="40" y2="13" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontFamily: SERIF, fontSize: 26, color: TEXT }}>WiredFor<span style={{ color: ACCENT }}>.ai</span></span>
+          </div>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: ACCENT, marginBottom: 16, fontFamily: SANS }}>Employer Access</div>
           <h2 style={{ fontSize: 22, fontWeight: 400, fontFamily: SERIF, color: TEXT, margin: "0 0 8px" }}>
             {mode === "login" ? "Welcome back" : "Create your account"}
@@ -1653,7 +1660,14 @@ export default function EmployerDashboard() {
       }}>
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: MUTED2, marginBottom: 4, fontFamily: SANS }}>Platform</div>
-          <div style={{ fontFamily: SERIF, fontSize: 22, color: TEXT, marginBottom: 8 }}>WiredFor.ai</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <svg viewBox="0 0 48 48" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="48" height="48" rx="12" fill="#0A0A0A"/>
+              <circle cx="8" cy="13" r="4" fill="#00C4A8"/><circle cx="18" cy="35" r="3" fill="#6B4FFF"/><circle cx="24" cy="22" r="3.5" fill="#00C4A8"/><circle cx="30" cy="35" r="3" fill="#6B4FFF"/><circle cx="40" cy="13" r="4" fill="#00C4A8"/>
+              <line x1="8" y1="13" x2="18" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="35" x2="24" y2="22" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="24" y1="22" x2="30" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="30" y1="35" x2="40" y2="13" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontFamily: SERIF, fontSize: 22, color: TEXT }}>WiredFor<span style={{ color: ACCENT }}>.ai</span></span>
+          </div>
           {employer && (
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, fontFamily: SANS }}>{employer.company_name}</div>
@@ -1746,7 +1760,14 @@ export default function EmployerDashboard() {
               )}
             </button>
           )}
-          <div style={{ fontSize: 11, color: MUTED2, padding: "0 12px", fontFamily: SANS }}>WiredFor.ai</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 12px" }}>
+            <svg viewBox="0 0 48 48" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="48" height="48" rx="12" fill="#0A0A0A"/>
+              <circle cx="8" cy="13" r="4" fill="#00C4A8"/><circle cx="18" cy="35" r="3" fill="#6B4FFF"/><circle cx="24" cy="22" r="3.5" fill="#00C4A8"/><circle cx="30" cy="35" r="3" fill="#6B4FFF"/><circle cx="40" cy="13" r="4" fill="#00C4A8"/>
+              <line x1="8" y1="13" x2="18" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="35" x2="24" y2="22" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="24" y1="22" x2="30" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="30" y1="35" x2="40" y2="13" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontSize: 11, color: MUTED2, fontFamily: SANS }}>WiredFor<span style={{ color: ACCENT }}>.ai</span></span>
+          </div>
         </div>
       </div>
 

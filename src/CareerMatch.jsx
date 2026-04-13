@@ -1168,9 +1168,16 @@ function Dashboard({
 
       {/* Mobile fixed header */}
       <header className="wf-dash-header">
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em" }}>WiredFor</div>
-          <div style={{ fontSize: 10, color: "#00C4A8", letterSpacing: 1, fontWeight: 500 }}>{wfId}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <svg viewBox="0 0 48 48" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="48" height="48" rx="12" fill="#0A0A0A"/>
+            <circle cx="8" cy="13" r="4" fill="#00C4A8"/><circle cx="18" cy="35" r="3" fill="#6B4FFF"/><circle cx="24" cy="22" r="3.5" fill="#00C4A8"/><circle cx="30" cy="35" r="3" fill="#6B4FFF"/><circle cx="40" cy="13" r="4" fill="#00C4A8"/>
+            <line x1="8" y1="13" x2="18" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="35" x2="24" y2="22" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="24" y1="22" x2="30" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="30" y1="35" x2="40" y2="13" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em" }}>WiredFor<span style={{ color: "#00C4A8" }}>.ai</span></div>
+            <div style={{ fontSize: 10, color: "#00C4A8", letterSpacing: 1, fontWeight: 500 }}>{wfId}</div>
+          </div>
         </div>
         <button className="cm-retake-btn" onClick={onRetake}>Retake</button>
       </header>

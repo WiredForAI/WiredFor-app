@@ -1176,8 +1176,13 @@ export default function LandingPage() {
         <div style={{ maxWidth: maxW, margin: "0 auto" }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24, marginBottom: 28 }}>
             <div>
-              <div style={{ fontFamily: T.serif, fontSize: 18, color: T.t1, marginBottom: 5 }}>
-                Wired<span style={{ color: T.teal }}>For</span>.ai
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
+                <svg viewBox="0 0 48 48" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="48" height="48" rx="12" fill="#0A0A0A"/>
+                  <circle cx="8" cy="13" r="4" fill="#00C4A8"/><circle cx="18" cy="35" r="3" fill="#6B4FFF"/><circle cx="24" cy="22" r="3.5" fill="#00C4A8"/><circle cx="30" cy="35" r="3" fill="#6B4FFF"/><circle cx="40" cy="13" r="4" fill="#00C4A8"/>
+                  <line x1="8" y1="13" x2="18" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="35" x2="24" y2="22" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="24" y1="22" x2="30" y2="35" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/><line x1="30" y1="35" x2="40" y2="13" stroke="#00C4A8" strokeWidth="2.5" strokeLinecap="round"/>
+                </svg>
+                <span style={{ fontFamily: T.serif, fontSize: 18, color: T.t1 }}>WiredFor<span style={{ color: T.teal }}>.ai</span></span>
               </div>
               <div style={{ fontSize: 13, color: T.t3, fontFamily: T.sans }}>Personality-first tech hiring</div>
             </div>
