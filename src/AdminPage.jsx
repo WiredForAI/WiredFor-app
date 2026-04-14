@@ -240,6 +240,7 @@ function ConnectModal({ userId, employers, onClose, onSaved }) {
     });
     const data = await res.json();
     if (!res.ok) { setErr(data.error || "Save failed"); setSaving(false); return; }
+    window.gtag?.("event", "intro_requested");
     onSaved();
     onClose();
   };

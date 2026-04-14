@@ -1272,6 +1272,7 @@ function EmployerAuth({ onComplete }) {
       if (mode === "signup") {
         const { data, error: err } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { user_type: "employer" } } });
         if (err) throw err;
+        window.gtag?.("event", "employer_signup");
         onComplete({ userId: data.user.id, email: email.trim(), isNew: true });
       } else {
         const { data, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });

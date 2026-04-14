@@ -1415,6 +1415,7 @@ export default function CareerMatch() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Analysis failed");
+        window.gtag?.("event", "resume_uploaded");
         const newResumeData  = data.resumeData || null;
         const newCareerPaths = data.careerPaths || null;
         const newMismatches  = data.mismatches  || [];
@@ -1547,6 +1548,7 @@ export default function CareerMatch() {
     setResult(enrichedRes);
     setPendingResult(null);
     setScreen("reveal");
+    window.gtag?.("event", "assessment_completed");
     saveToSupabase(userId, email, wfId);
   };
 
@@ -1843,7 +1845,7 @@ Rules:
             </div>
           ))}
         </div>
-        <button className="cm-primary-btn" onClick={() => setScreen("quiz")} style={{ background: "#00C4A8", color: "#fff" }}>
+        <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setScreen("quiz"); }} style={{ background: "#00C4A8", color: "#fff" }}>
           Start Assessment →
         </button>
       </div>
