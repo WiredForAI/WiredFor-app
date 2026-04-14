@@ -1354,6 +1354,59 @@ export default function CareerMatch() {
     });
   }, []);
 
+  // ── Restore saved progress ──────────────────────────────────────────────────
+  const [hasSavedProgress, setHasSavedProgress] = useState(false);
+
+  useEffect(() => {
+    if (screen !== "intro") return;
+    const storedWfId = localStorage.getItem("careermatch_wf_id");
+    if (!storedWfId) return;
+
+    fetch(`/api/save-answers?wfId=${encodeURIComponent(storedWfId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.progress?.answers && Object.keys(data.progress.answers).length > 0) {
+          setHasSavedProgress(true);
+        }
+      })
+      .catch(() => {});
+  }, [screen]);
+
+  const restoreProgress = () => {
+    const storedWfId = localStorage.getItem("careermatch_wf_id");
+    if (!storedWfId) return;
+
+    fetch(`/api/save-answers?wfId=${encodeURIComponent(storedWfId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.progress?.answers) {
+          const saved = data.progress.answers;
+          const answeredIds = Object.keys(saved).map(Number);
+          const lastAnsweredIdx = questions.reduce((max, q, i) => answeredIds.includes(q.id) ? i : max, -1);
+          setAnswers(saved);
+          setCurrentQ(Math.min(lastAnsweredIdx + 1, questions.length - 1));
+          setScreen("quiz");
+        }
+      })
+      .catch(() => setScreen("quiz"));
+  };
+
+  // ── GA4: track assessment abandonment ──────────────────────────────────────
+  useEffect(() => {
+    if (screen !== "quiz") return;
+
+    const handleAbandon = () => {
+      window.gtag?.("event", "assessment_abandoned", {
+        question_number: currentQ + 1,
+        questions_answered: Object.keys(answers).length,
+        total_questions: questions.length,
+      });
+    };
+
+    window.addEventListener("beforeunload", handleAbandon);
+    return () => window.removeEventListener("beforeunload", handleAbandon);
+  }, [screen, currentQ, answers]);
+
   // ── Skip auth if session already active ────────────────────────────────────
   useEffect(() => {
     if (screen !== "auth") return;
@@ -1621,9 +1674,8 @@ export default function CareerMatch() {
     const newAnswers = { ...answers, [q.id]: value };
     setAnswers(newAnswers);
     setAnimating(true);
-    const nextQ = questions[currentQ + 1];
-    const isLastInPart = !nextQ || nextQ.partNum !== q.partNum;
-    if (isLastInPart) saveAnswersProgress(newAnswers);
+    // Save progress after every question
+    saveAnswersProgress(newAnswers);
     setTimeout(() => {
       setSelectedOption(null);
       setTextInput("");
@@ -1860,9 +1912,20 @@ Rules:
             </div>
           ))}
         </div>
-        <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setScreen("quiz"); }} style={{ background: "#00C4A8", color: "#fff" }}>
-          Start Assessment →
-        </button>
+        {hasSavedProgress ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_resumed"); restoreProgress(); }} style={{ background: "#00C4A8", color: "#fff" }}>
+              Continue Where You Left Off →
+            </button>
+            <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setHasSavedProgress(false); setScreen("quiz"); }} style={{ background: "transparent", color: "#6B6B6B", border: "1px solid rgba(0,0,0,0.12)" }}>
+              Start Over
+            </button>
+          </div>
+        ) : (
+          <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setScreen("quiz"); }} style={{ background: "#00C4A8", color: "#fff" }}>
+            Start Assessment →
+          </button>
+        )}
       </div>
     </div>
   );

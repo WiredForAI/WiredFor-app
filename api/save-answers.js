@@ -8,10 +8,27 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
+
+  // ── GET: retrieve saved progress by wfId ──────────────────────────────────
+  if (req.method === "GET") {
+    const { wfId } = req.query;
+    if (!wfId) return res.status(400).json({ error: "Missing wfId" });
+
+    const { data, error } = await supabase
+      .from("assessment_progress")
+      .select("answers, updated_at")
+      .eq("wf_id", wfId)
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ progress: data || null });
+  }
+
+  // ── POST: save progress ───────────────────────────────────────────────────
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // Rate limit: 10 assessment saves per IP per hour
-  if (rateLimit(req, res, "save-ans", 10, 3_600_000)) return;
+  // Rate limit: 60 saves per IP per hour (one per question with headroom)
+  if (rateLimit(req, res, "save-ans", 60, 3_600_000)) return;
 
   const { wfId, answers } = req.body;
 
