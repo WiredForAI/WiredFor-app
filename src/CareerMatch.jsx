@@ -1270,7 +1270,9 @@ export default function CareerMatch() {
   const [textInput, setTextInput]       = useState("");
   const [animating, setAnimating]       = useState(false);
   const [pendingResult, setPendingResult] = useState(null);
-  const [wfId]                          = useState(() => localStorage.getItem("careermatch_wf_id") || generateWFId());
+  const [wfId, setWfId]                 = useState(() => {
+    return localStorage.getItem("careermatch_wf_id") || generateWFId();
+  });
 
   // Reveal flow
   const [revealStep, setRevealStep]     = useState(0);
@@ -1914,15 +1916,35 @@ Rules:
         </div>
         {hasSavedProgress ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_resumed"); restoreProgress(); }} style={{ background: "#00C4A8", color: "#fff" }}>
+            <button className="cm-primary-btn" onClick={() => {
+              localStorage.setItem("careermatch_wf_id", wfId);
+              console.log("[WiredFor.ai] Resuming with WF-ID:", wfId);
+              window.gtag?.("event", "assessment_resumed");
+              restoreProgress();
+            }} style={{ background: "#00C4A8", color: "#fff" }}>
               Continue Where You Left Off →
             </button>
-            <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setHasSavedProgress(false); setScreen("quiz"); }} style={{ background: "transparent", color: "#6B6B6B", border: "1px solid rgba(0,0,0,0.12)" }}>
+            <button className="cm-primary-btn" onClick={() => {
+              const freshId = generateWFId();
+              localStorage.setItem("careermatch_wf_id", freshId);
+              setWfId(freshId);
+              console.log("[WiredFor.ai] Starting over with new WF-ID:", freshId);
+              window.gtag?.("event", "assessment_started");
+              setHasSavedProgress(false);
+              setAnswers({});
+              setCurrentQ(0);
+              setScreen("quiz");
+            }} style={{ background: "transparent", color: "#6B6B6B", border: "1px solid rgba(0,0,0,0.12)" }}>
               Start Over
             </button>
           </div>
         ) : (
-          <button className="cm-primary-btn" onClick={() => { window.gtag?.("event", "assessment_started"); setScreen("quiz"); }} style={{ background: "#00C4A8", color: "#fff" }}>
+          <button className="cm-primary-btn" onClick={() => {
+            localStorage.setItem("careermatch_wf_id", wfId);
+            console.log("[WiredFor.ai] Assessment started with WF-ID:", wfId);
+            window.gtag?.("event", "assessment_started");
+            setScreen("quiz");
+          }} style={{ background: "#00C4A8", color: "#fff" }}>
             Start Assessment →
           </button>
         )}
