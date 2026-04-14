@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /assessment
+Allow: /jobs
 Disallow: /admin
 Disallow: /employer
 Disallow: /preview

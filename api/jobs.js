@@ -22,7 +22,6 @@ const CATEGORY_OCEAN = {
   "Finance / Legal":      { openness: 58, conscientiousness: 90, extraversion: 42, agreeableness: 55, neuroticism: 22 },
 };
 
-// Tech categories passed through to AI scoring — all others dropped before Claude sees them
 const TECH_CATEGORIES = new Set([
   "Software Development", "Data", "DevOps / Sysadmin", "Product", "QA", "Design", "Cybersecurity",
 ]);
@@ -94,29 +93,6 @@ function normalizeArbeitnow(job) {
   };
 }
 
-function normalizeMuse(job) {
-  const tags = (job.categories || []).map(c => c.name);
-  const category = inferCategory(job.name || "", tags);
-  const locationNames = (job.locations || []).map(l => l.name).filter(Boolean);
-  const isRemote = locationNames.some(l => /remote|flexible/i.test(l));
-  const location = isRemote ? "Remote" : (locationNames[0] || "Remote");
-  return {
-    id: `mu_${job.id}`,
-    url: job.refs?.landing_page || null,
-    title: job.name || "",
-    company_name: job.company?.name || "",
-    company_logo: null,
-    category,
-    tags: tags.slice(0, 4),
-    job_type: job.type || null,
-    location,
-    salary: null,
-    postedAt: job.publication_date || null,
-    description: stripHtml(job.contents),
-    source: "The Muse",
-  };
-}
-
 function normalizeFindwork(job) {
   const tags = (job.keywords || []).slice(0, 4);
   const category = inferCategory(job.role || "", tags);
@@ -137,16 +113,35 @@ function normalizeFindwork(job) {
   };
 }
 
+function normalizeRemoteOK(job) {
+  const tags = (job.tags || []).slice(0, 4);
+  const category = inferCategory(job.position || "", tags);
+  return {
+    id: `rok_${job.id}`,
+    url: job.url || `https://remoteok.com/remote-jobs/${job.id}`,
+    title: job.position || "",
+    company_name: job.company || "",
+    company_logo: job.company_logo || job.logo || null,
+    category,
+    tags,
+    job_type: "full_time",
+    location: job.location || "Remote",
+    salary: job.salary_min && job.salary_max ? `$${job.salary_min}–$${job.salary_max}` : null,
+    postedAt: job.date ? new Date(job.date).toISOString() : null,
+    description: stripHtml(job.description),
+    source: "RemoteOK",
+  };
+}
+
 function dedupKey(job) {
   return `${job.title}|${job.company_name}`.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
-const ALLOWED_JOB_DOMAINS = ["remotive.com", "www.arbeitnow.com", "www.themuse.com", "findwork.dev", "api.anthropic.com"];
+const ALLOWED_JOB_DOMAINS = ["remotive.com", "www.arbeitnow.com", "findwork.dev", "remoteok.com", "api.anthropic.com"];
 
-async function fetchWithTimeout(url, ms = 7000) {
-  // SSRF protection: only allow whitelisted domains
+async function fetchWithTimeout(url, opts = {}, ms = 7000) {
   const hostname = new URL(url).hostname;
   if (!ALLOWED_JOB_DOMAINS.includes(hostname)) {
     console.error(`Blocked fetch to non-whitelisted domain: ${hostname}`);
@@ -155,7 +150,7 @@ async function fetchWithTimeout(url, ms = 7000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const r = await fetch(url, { signal: controller.signal });
+    const r = await fetch(url, { ...opts, signal: controller.signal });
     if (!r.ok) return null;
     return await r.json();
   } catch {
@@ -172,25 +167,13 @@ async function fetchAllJobs() {
     fetchWithTimeout("https://remotive.com/api/remote-jobs?category=software-dev&limit=50"),
     fetchWithTimeout("https://remotive.com/api/remote-jobs?category=product&limit=30"),
     fetchWithTimeout("https://www.arbeitnow.com/api/job-board-api"),
-    fetchWithTimeout("https://www.themuse.com/api/public/jobs?page=0&limit=30&category=Software%20Engineer"),
-    fetchWithTimeout("https://www.themuse.com/api/public/jobs?page=0&limit=20&category=Data%20Science"),
-    fetchWithTimeout("https://www.themuse.com/api/public/jobs?page=0&limit=20&category=IT"),
+    fetchWithTimeout("https://remoteok.com/api", { headers: { "User-Agent": "WiredFor.ai/1.0" } }),
     findworkKey
-      ? (async () => {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 7000);
-          try {
-            const r = await fetch("https://findwork.dev/api/jobs/?format=json&remote=true&limit=50", {
-              headers: { "Authorization": `Token ${findworkKey}` },
-              signal: controller.signal,
-            });
-            return r.ok ? await r.json() : null;
-          } catch { return null; } finally { clearTimeout(timer); }
-        })()
+      ? fetchWithTimeout("https://findwork.dev/api/jobs/?format=json&remote=true&limit=50", { headers: { "Authorization": `Token ${findworkKey}` } })
       : Promise.resolve(null),
   ];
 
-  const [remSwDev, remProduct, arbeitnow, museEng, museData, museIT, findwork] =
+  const [remSwDev, remProduct, arbeitnow, remoteok, findwork] =
     await Promise.allSettled(fetches);
 
   const normalized = [];
@@ -207,10 +190,10 @@ async function fetchAllJobs() {
     for (const job of arbeitnow.value.data) normalized.push(normalizeArbeitnow(job));
   }
 
-  // The Muse
-  for (const r of [museEng, museData, museIT]) {
-    if (r.status === "fulfilled" && r.value?.results) {
-      for (const job of r.value.results) normalized.push(normalizeMuse(job));
+  // RemoteOK — response is an array, first element is metadata
+  if (remoteok.status === "fulfilled" && Array.isArray(remoteok.value)) {
+    for (const job of remoteok.value) {
+      if (job.id && job.position) normalized.push(normalizeRemoteOK(job));
     }
   }
 
@@ -222,12 +205,12 @@ async function fetchAllJobs() {
   const counts = {
     remotive: normalized.filter(j => j.source === "Remotive").length,
     arbeitnow: normalized.filter(j => j.source === "Arbeitnow").length,
-    muse: normalized.filter(j => j.source === "The Muse").length,
+    remoteok: normalized.filter(j => j.source === "RemoteOK").length,
     findwork: normalized.filter(j => j.source === "Findwork").length,
   };
   console.log("Job board counts:", counts);
 
-  // Deduplicate by title+company — first source seen wins (Remotive has priority)
+  // Deduplicate by title+company
   const seen = new Set();
   return normalized.filter(job => {
     const key = dedupKey(job);
@@ -260,19 +243,29 @@ function prefilterByPreference(jobs, workPreference, candidateLocation) {
   return jobs;
 }
 
+// ── Quick category-based match scoring (no AI) ──────────────────────────────
+
+function quickMatchScore(ocean, job) {
+  const ideal = CATEGORY_OCEAN[job.category];
+  if (!ideal || !ocean) return null;
+  const traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"];
+  let totalDiff = 0;
+  for (const t of traits) {
+    totalDiff += Math.abs((ocean[t] || 50) - (ideal[t] || 50));
+  }
+  // Max possible diff = 500 (5 traits * 100). Convert to 0-100 score.
+  return Math.round(Math.max(0, 100 - (totalDiff / 5) * 1.2));
+}
+
 // ── AI scoring ────────────────────────────────────────────────────────────────
 
 async function scoreWithAI(candidate, jobs) {
   const { ocean, archetype, operatingStyle, location, workPreference, resumeData } = candidate;
 
-  // Drop non-tech roles
   const techJobs = jobs.filter(j => !j.category || TECH_CATEGORIES.has(j.category));
-
-  // Apply work preference + location filter
   const filteredJobs = prefilterByPreference(techJobs, workPreference, location);
   if (filteredJobs.length === 0) return [];
 
-  // Cap at 80 jobs to keep Claude prompt manageable
   const jobsToScore = filteredJobs.slice(0, 80);
 
   const jobList = jobsToScore
@@ -356,10 +349,83 @@ Respond with ONLY this JSON (no extra text):
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   // Rate limit: 100 job searches per IP per day
   if (rateLimit(req, res, "jobs", 100, 86_400_000)) return;
+
+  // Ensure cache is fresh
+  if (!cache.jobs || Date.now() - cache.timestamp > CACHE_TTL) {
+    console.log("Fetching fresh jobs from Remotive, Arbeitnow, RemoteOK, Findwork...");
+    cache.jobs = await fetchAllJobs();
+    cache.timestamp = Date.now();
+    console.log(`Cached ${cache.jobs.length} jobs`);
+  }
+
+  // ── GET: public jobs listing (no auth required) ───────────────────────────
+  if (req.method === "GET") {
+    const { q, category, workType } = req.query;
+
+    let jobs = cache.jobs.filter(j => !j.category || TECH_CATEGORIES.has(j.category));
+
+    // Search filter
+    if (q) {
+      const query = q.toLowerCase();
+      jobs = jobs.filter(j =>
+        j.title.toLowerCase().includes(query) ||
+        j.company_name.toLowerCase().includes(query) ||
+        (j.tags || []).some(t => t.toLowerCase().includes(query))
+      );
+    }
+
+    // Category filter
+    if (category && category !== "all") {
+      jobs = jobs.filter(j => j.category === category);
+    }
+
+    // Work type filter
+    if (workType === "remote") {
+      jobs = jobs.filter(j => isRemoteJob(j.location));
+    } else if (workType === "onsite") {
+      jobs = jobs.filter(j => !isRemoteJob(j.location));
+    }
+
+    // Add quick match scores if ocean is provided via query
+    const oceanParam = req.query.ocean;
+    let ocean = null;
+    if (oceanParam) {
+      try { ocean = JSON.parse(oceanParam); } catch {}
+    }
+
+    const results = jobs.slice(0, 100).map(j => ({
+      id: j.id,
+      url: j.url,
+      title: j.title,
+      company: j.company_name,
+      logo: j.company_logo,
+      category: j.category,
+      tags: j.tags,
+      jobType: j.job_type,
+      location: j.location,
+      salary: j.salary,
+      postedAt: j.postedAt,
+      source: j.source,
+      description: j.description,
+      matchScore: ocean ? quickMatchScore(ocean, j) : null,
+    }));
+
+    // Sort by match score if available, otherwise by date
+    if (ocean) {
+      results.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    } else {
+      results.sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0));
+    }
+
+    res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=300");
+    return res.status(200).json({ jobs: results, total: jobs.length });
+  }
+
+  // ── POST: AI-scored personalized matches (existing behavior) ──────────────
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { ocean, archetype, operatingStyle, location, workPreference, resumeData } = req.body || {};
 
@@ -368,13 +434,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!cache.jobs || Date.now() - cache.timestamp > CACHE_TTL) {
-      console.log("Fetching fresh jobs from Remotive, Arbeitnow, The Muse, Findwork...");
-      cache.jobs = await fetchAllJobs();
-      cache.timestamp = Date.now();
-      console.log(`Cached ${cache.jobs.length} jobs`);
-    }
-
     const results = await scoreWithAI({ ocean, archetype, operatingStyle, location, workPreference, resumeData: resumeData || null }, cache.jobs);
 
     res.setHeader("Cache-Control", "no-store");

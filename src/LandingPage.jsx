@@ -693,7 +693,7 @@ export default function LandingPage() {
 
           {!mobile && (
             <nav style={{ display: "flex", alignItems: "center", gap: 2 }}>
-              {[["How It Works", "#how-it-works"], ["For Employers", "#for-employers"], ["For Candidates", "#for-candidates"]].map(([label, href]) => (
+              {[["How It Works", "#how-it-works"], ["Jobs", "/jobs"], ["For Employers", "#for-employers"], ["For Candidates", "#for-candidates"]].map(([label, href]) => (
                 <a key={label} href={href} style={{
                   textDecoration: "none", color: T.t2, fontSize: 14,
                   padding: "7px 13px", borderRadius: 7, transition: "color 0.15s", fontFamily: T.sans,
