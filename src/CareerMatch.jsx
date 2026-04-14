@@ -1233,25 +1233,39 @@ function generateWFId() {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-// Synchronous test-mode bootstrap — runs before first render, never touches Supabase
-function readTestProfile() {
-  if (localStorage.getItem("careermatch_test_mode") !== "true") return null;
-  try {
-    const raw = localStorage.getItem("careermatch_result");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+// Synchronous bootstrap — runs before first render
+function getInitialState() {
+  const params = new URLSearchParams(window.location.search);
+
+  // Retake flag: clear everything and force intro
+  if (params.get("retake") === "true") {
+    localStorage.removeItem("careermatch_result");
+    localStorage.removeItem("careermatch_wf_id");
+    localStorage.removeItem("careermatch_test_mode");
+    localStorage.removeItem("has_completed_onboarding");
+    window.history.replaceState({}, "", "/assessment");
+    return { screen: "intro", profile: null };
   }
+
+  // Test mode: load profile from localStorage
+  if (localStorage.getItem("careermatch_test_mode") === "true") {
+    try {
+      const raw = localStorage.getItem("careermatch_result");
+      const profile = raw ? JSON.parse(raw) : null;
+      if (profile) return { screen: "reveal", profile };
+    } catch {}
+  }
+
+  return { screen: "checking", profile: null };
 }
 
 export default function CareerMatch() {
-  // Synchronous initializers — if test mode is active the correct values are
-  // set on the very first render; Supabase is never consulted.
-  const testProfile                      = readTestProfile();
-  const [screen, setScreen]             = useState(testProfile ? "reveal" : "checking");
+  // Synchronous initializers — retake flag, test mode, or default checking state
+  const [initial]                        = useState(() => getInitialState());
+  const [screen, setScreen]             = useState(initial.screen);
   const [currentQ, setCurrentQ]         = useState(0);
   const [answers, setAnswers]           = useState({});
-  const [result, setResult]             = useState(testProfile ?? null);
+  const [result, setResult]             = useState(initial.profile);
   const [selectedOption, setSelectedOption] = useState(null);
   const [textInput, setTextInput]       = useState("");
   const [animating, setAnimating]       = useState(false);
@@ -1269,8 +1283,8 @@ export default function CareerMatch() {
   const jobsLoadedRef                   = useRef(false);
 
   // Lifted resume state
-  const [resumeData, setResumeData]         = useState(testProfile?.resumeData ?? null);
-  const [careerPaths, setCareerPaths]       = useState(testProfile?.careerPaths ?? null);
+  const [resumeData, setResumeData]         = useState(initial.profile?.resumeData ?? null);
+  const [careerPaths, setCareerPaths]       = useState(initial.profile?.careerPaths ?? null);
   const [resumeMismatches, setResumeMismatches] = useState([]);
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeError, setResumeError]       = useState(null);
@@ -1278,16 +1292,9 @@ export default function CareerMatch() {
 
   // ── Mount: check for returning candidate ───────────────────────────────────
   useEffect(() => {
-    // Test mode was already resolved synchronously above — skip Supabase entirely.
-    if (localStorage.getItem("careermatch_test_mode") === "true") return;
-
-    // Retake flag from landing page CTAs — always show intro, skip saved profile
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("retake") === "true") {
-      window.history.replaceState({}, "", "/assessment");
-      setScreen("intro");
-      return;
-    }
+    // Retake and test mode were resolved synchronously in getInitialState() —
+    // skip Supabase if screen is already set to intro or reveal.
+    if (initial.screen !== "checking") return;
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {

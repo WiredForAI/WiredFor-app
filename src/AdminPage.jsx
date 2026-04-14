@@ -1156,6 +1156,13 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
+
+      // Clear any test profile data cached in localStorage
+      localStorage.removeItem("careermatch_test_mode");
+      localStorage.removeItem("careermatch_result");
+      localStorage.removeItem("careermatch_wf_id");
+      localStorage.removeItem("has_completed_onboarding");
+
       setClearMsg(`Deleted ${data.deleted ?? 0} test profile${data.deleted !== 1 ? "s" : ""}`);
       load(userId);
     } catch (e) {
