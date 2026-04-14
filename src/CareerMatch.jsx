@@ -1281,6 +1281,14 @@ export default function CareerMatch() {
     // Test mode was already resolved synchronously above — skip Supabase entirely.
     if (localStorage.getItem("careermatch_test_mode") === "true") return;
 
+    // Retake flag from landing page CTAs — always show intro, skip saved profile
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("retake") === "true") {
+      window.history.replaceState({}, "", "/assessment");
+      setScreen("intro");
+      return;
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         localStorage.removeItem("careermatch_result");

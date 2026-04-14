@@ -809,7 +809,7 @@ export default function LandingPage() {
               justifyContent: mobile ? "center" : "flex-start",
               gap: 10, marginBottom: 16,
             }}>
-              <a href="/assessment" style={{
+              <a href="/assessment?retake=true" style={{
                 textDecoration: "none", background: T.teal, color: "#fff",
                 fontSize: 15, fontWeight: 600, fontFamily: T.sans,
                 padding: "14px 26px", borderRadius: 10,
@@ -928,7 +928,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ marginTop: 36, display: "flex", flexDirection: mobile ? "column" : "row", alignItems: mobile ? "flex-start" : "center", gap: 16 }}>
-            <a href="/assessment" style={{
+            <a href="/assessment?retake=true" style={{
               textDecoration: "none", background: T.teal, color: "#fff",
               fontSize: 14, fontWeight: 600, fontFamily: T.sans,
               padding: "13px 22px", borderRadius: 9,
@@ -1119,7 +1119,7 @@ export default function LandingPage() {
             }}>
               Free. Anonymous. 15 minutes. No resume required to start. Anonymous until you're ready.
             </p>
-            <a href="/assessment" style={{
+            <a href="/assessment?retake=true" style={{
               textDecoration: "none", background: T.teal, color: "#fff",
               fontSize: 14, fontWeight: 600, fontFamily: T.sans,
               padding: "13px 22px", borderRadius: 9,
