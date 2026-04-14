@@ -74,25 +74,6 @@ function normalizeRemotive(job) {
   };
 }
 
-function normalizeArbeitnow(job) {
-  const category = inferCategory(job.title, job.tags || []);
-  return {
-    id: `an_${job.slug}`,
-    url: job.url,
-    title: job.title,
-    company_name: job.company_name,
-    company_logo: null,
-    category,
-    tags: (job.tags || []).slice(0, 4),
-    job_type: (job.job_types || [])[0] || null,
-    location: job.remote ? "Remote" : (job.location || "Remote"),
-    salary: null,
-    postedAt: job.created_at ? new Date(job.created_at * 1000).toISOString() : null,
-    description: stripHtml(job.description),
-    source: "Arbeitnow",
-  };
-}
-
 function normalizeFindwork(job) {
   const tags = (job.keywords || []).slice(0, 4);
   const category = inferCategory(job.role || "", tags);
@@ -139,7 +120,7 @@ function dedupKey(job) {
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
-const ALLOWED_JOB_DOMAINS = ["remotive.com", "www.arbeitnow.com", "findwork.dev", "remoteok.com", "api.anthropic.com"];
+const ALLOWED_JOB_DOMAINS = ["remotive.com", "findwork.dev", "remoteok.com", "api.anthropic.com"];
 
 async function fetchWithTimeout(url, opts = {}, ms = 7000) {
   const hostname = new URL(url).hostname;
@@ -166,14 +147,13 @@ async function fetchAllJobs() {
   const fetches = [
     fetchWithTimeout("https://remotive.com/api/remote-jobs?category=software-dev&limit=50"),
     fetchWithTimeout("https://remotive.com/api/remote-jobs?category=product&limit=30"),
-    fetchWithTimeout("https://www.arbeitnow.com/api/job-board-api"),
     fetchWithTimeout("https://remoteok.com/api", { headers: { "User-Agent": "WiredFor.ai/1.0" } }),
     findworkKey
       ? fetchWithTimeout("https://findwork.dev/api/jobs/?format=json&remote=true&limit=50", { headers: { "Authorization": `Token ${findworkKey}` } })
       : Promise.resolve(null),
   ];
 
-  const [remSwDev, remProduct, arbeitnow, remoteok, findwork] =
+  const [remSwDev, remProduct, remoteok, findwork] =
     await Promise.allSettled(fetches);
 
   const normalized = [];
@@ -183,11 +163,6 @@ async function fetchAllJobs() {
     if (r.status === "fulfilled" && r.value?.jobs) {
       for (const job of r.value.jobs) normalized.push(normalizeRemotive(job));
     }
-  }
-
-  // Arbeitnow
-  if (arbeitnow.status === "fulfilled" && arbeitnow.value?.data) {
-    for (const job of arbeitnow.value.data) normalized.push(normalizeArbeitnow(job));
   }
 
   // RemoteOK — response is an array, first element is metadata
@@ -204,7 +179,6 @@ async function fetchAllJobs() {
 
   const counts = {
     remotive: normalized.filter(j => j.source === "Remotive").length,
-    arbeitnow: normalized.filter(j => j.source === "Arbeitnow").length,
     remoteok: normalized.filter(j => j.source === "RemoteOK").length,
     findwork: normalized.filter(j => j.source === "Findwork").length,
   };
@@ -355,7 +329,7 @@ export default async function handler(req, res) {
 
   // Ensure cache is fresh
   if (!cache.jobs || Date.now() - cache.timestamp > CACHE_TTL) {
-    console.log("Fetching fresh jobs from Remotive, Arbeitnow, RemoteOK, Findwork...");
+    console.log("Fetching fresh jobs from Remotive, RemoteOK, Findwork...");
     cache.jobs = await fetchAllJobs();
     cache.timestamp = Date.now();
     console.log(`Cached ${cache.jobs.length} jobs`);

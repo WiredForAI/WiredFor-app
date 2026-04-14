@@ -276,7 +276,7 @@ export default function JobsPage() {
       {/* Footer */}
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "24px", textAlign: "center" }}>
         <div style={{ fontSize: 11, color: MUTED2, fontFamily: SANS }}>
-          Jobs aggregated from Remotive, Arbeitnow, RemoteOK, and Findwork.dev · Updated every 6 hours
+          Jobs aggregated from Remotive, RemoteOK, and Findwork.dev · Updated every 6 hours
         </div>
       </footer>
 

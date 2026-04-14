@@ -688,7 +688,7 @@ function RolesTab({ result, resumeMismatches, jobs, jobsLoading, jobsError, jobs
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#00C4A8" }}>Live Openings</div>
-            <div style={{ fontSize: 10, color: "#9B9B9B", letterSpacing: 1 }}>Remotive · Arbeitnow · The Muse · Findwork</div>
+            <div style={{ fontSize: 10, color: "#9B9B9B", letterSpacing: 1 }}>Remotive · RemoteOK · Findwork</div>
           </div>
           {jobsLoading && (
             <div style={{ display: "flex", gap: 10, alignItems: "center", color: "#6B6B6B", fontSize: 13, padding: "20px 0" }}>
@@ -1001,7 +1001,7 @@ export function GuidedReveal({
             <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#F55D2C", marginBottom: 8 }}>Live Openings</div>
             <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: "#0A0A0A", margin: "0 0 6px" }}>Jobs matched to your wiring</h2>
             <p style={{ color: "#6B6B6B", fontSize: 13, lineHeight: 1.65, margin: "0 0 20px" }}>
-              Remotive · Arbeitnow · The Muse · Findwork
+              Remotive · RemoteOK · Findwork
             </p>
             {jobsLoading && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "40px 0" }}>
