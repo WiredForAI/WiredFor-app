@@ -251,7 +251,8 @@ export default async function handler(req, res) {
 
   // ── POST update-candidate-email ───────────────────────────────────────────
   if (req.method === "POST" && action === "update-candidate-email") {
-    const { wfId, email } = req.body;
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { wfId, email } = body;
     if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email" });
 
     const { error } = await supabase
@@ -264,9 +265,10 @@ export default async function handler(req, res) {
 
   // ── POST invite-candidate ────────────────────────────────────────────────
   if (req.method === "POST" && action === "invite-candidate") {
-    const { wfId, email } = req.body;
-    console.log("[invite-candidate] body:", JSON.stringify({ action: req.body.action, wfId, email, hasWfId: !!wfId, hasEmail: !!email }));
-    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email", received: { wfId: wfId || null, email: email || null } });
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { wfId, email } = body;
+    console.log("[invite-candidate] bodyType:", typeof req.body, "parsed:", JSON.stringify({ wfId, email }));
+    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email", received: { wfId: wfId || null, email: email || null }, bodyType: typeof req.body });
 
     // Save email to candidate record
     const { error: updateErr } = await supabase
