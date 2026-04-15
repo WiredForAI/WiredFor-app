@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase, authFetch } from "./supabaseClient";
 import { ARCHETYPES } from "./archetypes";
 import { GuidedReveal } from "./CareerMatch.jsx";
@@ -456,41 +456,50 @@ function SimulateModal({ onClose, onSaved, onGenerated }) {
 }
 
 // ── Claim Profile Panel ───────────────────────────────────────────────────
-function ClaimProfilePanel({ candidate: c, userId, inviteEmail, setInviteEmail, inviteState, setInviteState, inviteError, setInviteError, onUpdated }) {
-  const hasEmail = !!(c.email || inviteState === "sent");
-  const isEditing = inviteState === "editing";
+function ClaimProfilePanel({ candidate: c, userId, onUpdated }) {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("idle"); // idle | editing | saving | sending | sent | error
+  const [error, setError] = useState("");
+  const emailRef = useRef("");
 
-  const saveEmail = async () => {
-    setInviteState("saving"); setInviteError("");
+  // Keep ref in sync so async functions always read the latest value
+  emailRef.current = email;
+
+  const hasEmail = !!(c.email || state === "sent");
+  const isEditing = state === "editing";
+
+  const saveEmailOnly = async () => {
+    setState("saving"); setError("");
     try {
       const res = await authFetch("/api/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update-candidate-email", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
+        body: JSON.stringify({ action: "update-candidate-email", userId, wfId: c.wf_id, email: emailRef.current.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setInviteState("idle");
+      setState("idle");
       if (onUpdated) onUpdated();
     } catch (err) {
-      setInviteState("error"); setInviteError(err.message);
+      setState("error"); setError(err.message);
     }
   };
 
   const sendInvite = async (emailOverride) => {
-    setInviteState("sending"); setInviteError("");
+    const emailToSend = (emailOverride || emailRef.current).trim();
+    setState("sending"); setError("");
     try {
       const res = await authFetch("/api/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: (emailOverride || inviteEmail).trim() }),
+        body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: emailToSend }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setInviteState("sent");
+      setState("sent");
       if (onUpdated) onUpdated();
     } catch (err) {
-      setInviteState("error"); setInviteError(err.message);
+      setState("error"); setError(err.message);
     }
   };
 
@@ -498,63 +507,63 @@ function ClaimProfilePanel({ candidate: c, userId, inviteEmail, setInviteEmail, 
     <div style={{ marginBottom: 24, padding: "14px 16px", background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.15)", borderRadius: 10 }}>
       <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: PURPLE, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Claim Profile</div>
 
-      {inviteState === "sent" && !isEditing ? (
-        <div style={{ fontSize: 13, color: ACCENT, fontFamily: SANS }}>Invite sent to {inviteEmail || c.email}!</div>
+      {state === "sent" && !isEditing ? (
+        <div style={{ fontSize: 13, color: ACCENT, fontFamily: SANS }}>Invite sent to {email || c.email}!</div>
       ) : hasEmail && !isEditing ? (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 13, color: TEXT, fontFamily: SANS }}>{c.email}</span>
-          <button onClick={() => { setInviteEmail(c.email); setInviteState("editing"); setInviteError(""); }} style={{
+          <button onClick={() => { setEmail(c.email); setState("editing"); setError(""); }} style={{
             background: "none", border: `1px solid ${BORDER}`, borderRadius: 5,
             fontSize: 11, color: MUTED, cursor: "pointer", padding: "3px 8px", fontFamily: SANS,
           }}>Edit</button>
           <button
-            disabled={inviteState === "sending"}
+            disabled={state === "sending"}
             onClick={() => sendInvite(c.email)}
             style={{
               background: PURPLE, color: "#fff", border: "none", borderRadius: 5,
               fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "3px 10px", fontFamily: SANS,
-              opacity: inviteState === "sending" ? 0.6 : 1,
+              opacity: state === "sending" ? 0.6 : 1,
             }}
-          >{inviteState === "sending" ? "Sending..." : "Resend Invite"}</button>
+          >{state === "sending" ? "Sending..." : "Resend Invite"}</button>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
           <input
-            type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+            type="email" value={email} onChange={e => setEmail(e.target.value)}
             placeholder="Enter candidate's email..."
             style={{ flex: 1, minWidth: 180, padding: "8px 12px", fontSize: 13, fontFamily: SANS, border: `1px solid ${BORDER}`, borderRadius: 6, outline: "none", background: BG }}
           />
           {isEditing ? (
             <>
-              <button disabled={inviteState === "saving" || !inviteEmail.trim()} onClick={saveEmail} style={{
+              <button disabled={state === "saving" || !email.trim()} onClick={saveEmailOnly} style={{
                 padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
                 background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
-                cursor: inviteState === "saving" ? "wait" : "pointer",
-                opacity: inviteState === "saving" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
-              }}>{inviteState === "saving" ? "Saving..." : "Save Email"}</button>
-              <button disabled={inviteState === "sending" || !inviteEmail.trim()} onClick={() => sendInvite()} style={{
+                cursor: state === "saving" ? "wait" : "pointer",
+                opacity: state === "saving" || !email.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+              }}>{state === "saving" ? "Saving..." : "Save Email"}</button>
+              <button disabled={state === "sending" || !email.trim()} onClick={() => sendInvite()} style={{
                 padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
                 background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
-                cursor: inviteState === "sending" ? "wait" : "pointer",
-                opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
-              }}>{inviteState === "sending" ? "Sending..." : "Save & Resend"}</button>
-              <button onClick={() => setInviteState("idle")} style={{
+                cursor: state === "sending" ? "wait" : "pointer",
+                opacity: state === "sending" || !email.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+              }}>{state === "sending" ? "Sending..." : "Save & Resend"}</button>
+              <button onClick={() => setState("idle")} style={{
                 padding: "8px 12px", fontSize: 12, fontFamily: SANS,
                 background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
                 color: MUTED, cursor: "pointer", whiteSpace: "nowrap",
               }}>Cancel</button>
             </>
           ) : (
-            <button disabled={inviteState === "sending" || !inviteEmail.trim()} onClick={() => sendInvite()} style={{
+            <button disabled={state === "sending" || !email.trim()} onClick={() => sendInvite()} style={{
               padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
               background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
-              cursor: inviteState === "sending" ? "wait" : "pointer",
-              opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
-            }}>{inviteState === "sending" ? "Sending..." : "Add Email & Invite"}</button>
+              cursor: state === "sending" ? "wait" : "pointer",
+              opacity: state === "sending" || !email.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+            }}>{state === "sending" ? "Sending..." : "Add Email & Invite"}</button>
           )}
         </div>
       )}
-      {inviteError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6, fontFamily: SANS }}>{inviteError}</div>}
+      {error && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6, fontFamily: SANS }}>{error}</div>}
     </div>
   );
 }
@@ -563,9 +572,6 @@ function ClaimProfilePanel({ candidate: c, userId, inviteEmail, setInviteEmail, 
 function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
   const [tab, setTab] = useState(0);
   const [showCandidateView, setShowCandidateView] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteState, setInviteState] = useState("idle"); // idle | sending | sent | error
-  const [inviteError, setInviteError] = useState("");
   if (!c) return null;
 
   // Normalize OCEAN to long keys (matches CareerMatch display)
@@ -679,10 +685,7 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
 
           {/* Invite / Claim Profile — shown for profiles without a linked user_id */}
           {c.archetype && !c.user_id && <ClaimProfilePanel
-            candidate={c} userId={userId} inviteEmail={inviteEmail} setInviteEmail={setInviteEmail}
-            inviteState={inviteState} setInviteState={setInviteState}
-            inviteError={inviteError} setInviteError={setInviteError}
-            onUpdated={onUpdated}
+            candidate={c} userId={userId} onUpdated={onUpdated}
           />}
 
           {/* ── Tab 0: Profile ─────────────────────────────────────────────── */}
