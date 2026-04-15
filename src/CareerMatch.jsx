@@ -1417,6 +1417,11 @@ export default function CareerMatch() {
     });
   }, [screen]);
 
+  // ── Cleanup background retry on unmount ─────────────────────────────────────
+  useEffect(() => {
+    return () => { if (bgRetryRef.current) clearInterval(bgRetryRef.current); };
+  }, []);
+
   // ── Auto-load jobs on reveal step 3 ────────────────────────────────────────
   useEffect(() => {
     if (screen !== "reveal" || revealStep !== 3) return;
@@ -1618,7 +1623,6 @@ export default function CareerMatch() {
     setResult(enrichedRes);
     setPendingResult(null);
     setScreen("reveal");
-    window.gtag?.("event", "assessment_completed");
     saveToSupabase(userId, email, wfId);
   };
 
@@ -1697,7 +1701,11 @@ export default function CareerMatch() {
   };
 
   // ── Analysis ───────────────────────────────────────────────────────────────
-  const runAnalysis = async (allAnswers) => {
+  const [retryCount, setRetryCount] = useState(0);
+  const [retryStatus, setRetryStatus] = useState(null); // null | "retrying" | "background"
+  const bgRetryRef = useRef(null);
+
+  const runAnalysis = async (allAnswers, attempt = 1) => {
     const answerSummary = Object.entries(allAnswers).map(([id, ans]) => {
       const q = questions.find(q => q.id === parseInt(id));
       return `Q${id} [${q.big5}] ${q.text}\n→ ${ans}`;
@@ -1848,6 +1856,12 @@ Rules:
       parsed.archetypeShadowSide = matchedArchetype.shadowSide;
       parsed.archetypeTechFit    = matchedArchetype.techFit;
 
+      // Success — clear any background retry
+      if (bgRetryRef.current) { clearInterval(bgRetryRef.current); bgRetryRef.current = null; }
+      setRetryStatus(null);
+      setRetryCount(0);
+      window.gtag?.("event", "assessment_completed");
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         localStorage.setItem("careermatch_wf_id", wfId);
@@ -1861,19 +1875,32 @@ Rules:
         setScreen("auth");
       }
     } catch (err) {
-      console.error("Analysis error:", err);
-      const fallback = {
-        archetype: "Error — Retake Assessment",
-        archetypeTagline: "", archetypeCategory: "", archetypeShadowSide: "", archetypeTechFit: [],
-        operatingStyle: `Something went wrong: ${err.message}. Please try retaking the assessment.`,
-        ocean: { openness: 0, conscientiousness: 0, extraversion: 0, agreeableness: 0, neuroticism: 0 },
-        roles: [], watchOuts: ["Could not generate results — please retake"],
-        cultureFit: "Please retake the assessment to get your results.",
-        careerClarity: null, growthPath: [], interviewIntelligence: [], environmentsToAvoid: [],
-      };
-      setResult(fallback);
-      setRevealStep(0);
-      setScreen("reveal");
+      console.error(`Analysis error (attempt ${attempt}/3):`, err.message);
+
+      // Retry up to 3 times with increasing delay
+      if (attempt < 3) {
+        const delay = attempt * 3000; // 3s, 6s
+        setRetryStatus("retrying");
+        setRetryCount(attempt);
+        console.log(`[WiredFor.ai] Retrying analysis in ${delay / 1000}s...`);
+        await new Promise(r => setTimeout(r, delay));
+        return runAnalysis(allAnswers, attempt + 1);
+      }
+
+      // All 3 attempts failed — show pending message and start background retry
+      console.log("[WiredFor.ai] All retries failed. Starting background retry.");
+      setRetryStatus("background");
+      setScreen("loading");
+
+      // Save answers so they're not lost
+      saveAnswersProgress(allAnswers);
+
+      // Background retry every 5 minutes
+      if (bgRetryRef.current) clearInterval(bgRetryRef.current);
+      bgRetryRef.current = setInterval(() => {
+        console.log("[WiredFor.ai] Background retry attempt...");
+        runAnalysis(allAnswers, 1);
+      }, 5 * 60 * 1000);
     }
   };
 
@@ -1955,12 +1982,27 @@ Rules:
   if (screen === "loading") return (
     <div className="cm-container" style={{ justifyContent: "center" }}>
       <style>{globalStyles}</style>
-      <div style={{ textAlign: "center", padding: "0 24px" }}>
+      <div style={{ textAlign: "center", padding: "0 24px", maxWidth: 400 }}>
         <div style={{
           width: 56, height: 56, border: "2px solid rgba(0,0,0,0.08)", borderTop: "2px solid #00C4A8",
           borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 24px"
         }} />
-        <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: "#9B9B9B" }}>Analyzing your profile</div>
+        {retryStatus === "background" ? (
+          <>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#0A0A0A", marginBottom: 8 }}>Your results are being generated</div>
+            <div style={{ fontSize: 13, color: "#6B6B6B", lineHeight: 1.6, marginBottom: 16 }}>
+              This is taking longer than usual. Your answers are saved — you can stay on this page or come back later and your results will be ready.
+            </div>
+            <div style={{ fontSize: 11, color: "#9B9B9B" }}>Retrying automatically...</div>
+          </>
+        ) : retryStatus === "retrying" ? (
+          <>
+            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: "#9B9B9B" }}>Analyzing your profile</div>
+            <div style={{ fontSize: 12, color: "#9B9B9B", marginTop: 8 }}>Retry {retryCount} of 3...</div>
+          </>
+        ) : (
+          <div style={{ fontSize: 11, letterSpacing: 4, textTransform: "uppercase", color: "#9B9B9B" }}>Analyzing your profile</div>
+        )}
       </div>
     </div>
   );
