@@ -579,13 +579,30 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
             const isEditing = inviteState === "editing";
             const showInput = !hasEmail || isEditing;
 
-            const sendInvite = async () => {
+            const saveEmail = async () => {
+              setInviteState("saving"); setInviteError("");
+              try {
+                const res = await authFetch("/api/admin", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "update-candidate-email", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Failed");
+                setInviteState("idle");
+                if (onUpdated) onUpdated();
+              } catch (err) {
+                setInviteState("error"); setInviteError(err.message);
+              }
+            };
+
+            const sendInvite = async (emailOverride) => {
               setInviteState("sending"); setInviteError("");
               try {
                 const res = await authFetch("/api/admin", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
+                  body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: (emailOverride || inviteEmail).trim() }),
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || "Failed");
@@ -630,23 +647,48 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
                       placeholder="Enter candidate's email..."
                       style={{ flex: 1, minWidth: 180, padding: "8px 12px", fontSize: 13, fontFamily: SANS, border: `1px solid ${BORDER}`, borderRadius: 6, outline: "none", background: BG }}
                     />
-                    <button
-                      disabled={inviteState === "sending" || !inviteEmail.trim()}
-                      onClick={sendInvite}
-                      style={{
-                        padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
-                        background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
-                        cursor: inviteState === "sending" ? "wait" : "pointer",
-                        opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
-                        whiteSpace: "nowrap",
-                      }}
-                    >{inviteState === "sending" ? "Sending..." : isEditing ? "Save & Resend" : "Add Email & Invite"}</button>
-                    {isEditing && (
-                      <button onClick={() => setInviteState("idle")} style={{
-                        padding: "8px 12px", fontSize: 12, fontFamily: SANS,
-                        background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
-                        color: MUTED, cursor: "pointer",
-                      }}>Cancel</button>
+                    {isEditing ? (
+                      <>
+                        <button
+                          disabled={inviteState === "saving" || !inviteEmail.trim()}
+                          onClick={saveEmail}
+                          style={{
+                            padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                            background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
+                            cursor: inviteState === "saving" ? "wait" : "pointer",
+                            opacity: inviteState === "saving" || !inviteEmail.trim() ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >{inviteState === "saving" ? "Saving..." : "Save Email"}</button>
+                        <button
+                          disabled={inviteState === "sending" || !inviteEmail.trim()}
+                          onClick={() => sendInvite()}
+                          style={{
+                            padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                            background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
+                            cursor: inviteState === "sending" ? "wait" : "pointer",
+                            opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >{inviteState === "sending" ? "Sending..." : "Save & Resend"}</button>
+                        <button onClick={() => setInviteState("idle")} style={{
+                          padding: "8px 12px", fontSize: 12, fontFamily: SANS,
+                          background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
+                          color: MUTED, cursor: "pointer", whiteSpace: "nowrap",
+                        }}>Cancel</button>
+                      </>
+                    ) : (
+                      <button
+                        disabled={inviteState === "sending" || !inviteEmail.trim()}
+                        onClick={() => sendInvite()}
+                        style={{
+                          padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                          background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
+                          cursor: inviteState === "sending" ? "wait" : "pointer",
+                          opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >{inviteState === "sending" ? "Sending..." : "Add Email & Invite"}</button>
                     )}
                   </div>
                 )}

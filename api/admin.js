@@ -249,6 +249,19 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, deleted: count ?? 0 });
   }
 
+  // ── POST update-candidate-email ───────────────────────────────────────────
+  if (req.method === "POST" && action === "update-candidate-email") {
+    const { wfId, email } = req.body;
+    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email" });
+
+    const { error } = await supabase
+      .from("candidates")
+      .update({ email, updated_at: new Date().toISOString() })
+      .eq("wf_id", wfId);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ success: true });
+  }
+
   // ── POST invite-candidate ────────────────────────────────────────────────
   if (req.method === "POST" && action === "invite-candidate") {
     const { wfId, email } = req.body;
