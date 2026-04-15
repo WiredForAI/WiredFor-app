@@ -118,7 +118,7 @@ export default function JobsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState("Software Development");
   const [workType, setWorkType] = useState("all");
   const [ocean, setOcean] = useState(null);
   const [hasProfile, setHasProfile] = useState(false);

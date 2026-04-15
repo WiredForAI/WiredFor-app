@@ -36,20 +36,39 @@ function stripHtml(html) {
 }
 
 function inferCategory(title, tags) {
-  const combined = (title + " " + tags.join(" ")).toLowerCase();
-  if (/\b(cyber|security|infosec|penetration|pentest|\bsoc\b|\bsiem\b|threat|vulnerability|firewall|\bcissp\b|\bciso\b|zero.trust)\b/.test(combined)) return "Cybersecurity";
-  if (/\b(engineer|developer|programmer|frontend|backend|fullstack|full.stack|react|node|python|java|rails|php|ios|android|mobile|software)\b/.test(combined)) return "Software Development";
-  if (/\b(product manager|product owner|\bpm\b|roadmap|product lead)\b/.test(combined)) return "Product";
-  if (/\b(design|ux\b|ui\b|figma|visual|brand|creative|illustrat)\b/.test(combined)) return "Design";
-  if (/\b(data|analyst|analytics|machine learning|\bml\b|\bai\b|scientist|\bbi\b|tableau|\bsql\b|data engineer)\b/.test(combined)) return "Data";
-  if (/\b(devops|sre\b|platform|infrastructure|cloud|kubernetes|docker|\baws\b|\bgcp\b|azure|sysadmin|reliability)\b/.test(combined)) return "DevOps / Sysadmin";
+  const t = (title || "").toLowerCase();
+  const combined = (t + " " + (tags || []).join(" ")).toLowerCase();
+
+  // Security first — "security engineer" should be Security not Engineering
+  if (/\b(cyber|security|infosec|penetration|pentest|\bsoc\b|\bsiem\b|threat|vulnerability|firewall|\bcissp\b|\bciso\b|zero.trust|appsec)\b/.test(combined)) return "Cybersecurity";
+
+  // Data — "data engineer" should be Data not Engineering
+  if (/\b(data.scientist|data.engineer|data.analyst|machine.learning|\bml\b|deep.learning|\bai\b.engineer|analytics.engineer|\bbi\b.engineer|tableau|\bsql\b.developer)\b/.test(combined)) return "Data";
+  if (/\b(data|analyst|analytics|machine learning|\bml\b|scientist|\bbi\b)\b/.test(t)) return "Data";
+
+  // DevOps — "platform engineer" should be DevOps not Engineering
+  if (/\b(devops|sre\b|site.reliability|platform.engineer|infrastructure|cloud.engineer|kubernetes|docker|\baws\b.engineer|\bgcp\b|azure.engineer|sysadmin|reliability)\b/.test(combined)) return "DevOps / Sysadmin";
+
+  // Product
+  if (/\b(product.manager|product.owner|product.lead|product.director|head.of.product|\bcpo\b)\b/.test(combined)) return "Product";
+  if (/\bproduct\b/.test(t) && /\b(manager|owner|lead|director|head)\b/.test(t)) return "Product";
+
+  // Design
+  if (/\b(designer|ux\b|ui\b|ux.ui|figma|visual.design|brand.design|creative.director|interaction.design|product.design)\b/.test(combined)) return "Design";
+
+  // QA
+  if (/\b(qa\b|quality.assurance|test.engineer|sdet|automation.test|quality.engineer)\b/.test(combined)) return "QA";
+
+  // Engineering — broadest match, checked after more specific categories
+  if (/\b(engineer|developer|programmer|frontend|front.end|backend|back.end|fullstack|full.stack|react|node\.js|python|java|golang|rust|rails|php|ios|android|mobile|software|architect|tech.lead|cto\b|svelte|vue|angular|typescript|\.net)\b/.test(combined)) return "Software Development";
+
+  // Non-tech categories
   if (/\b(customer success|customer service|support|helpdesk|\bcx\b)\b/.test(combined)) return "Customer Service";
   if (/\b(sales|account executive|\bae\b|\bbdr\b|\bsdr\b|business development)\b/.test(combined)) return "Sales";
   if (/\b(marketing|seo\b|sem\b|growth|content strateg|demand gen|paid media)\b/.test(combined)) return "Marketing";
   if (/\b(writer|writing|content|copywriter|editor|journalist)\b/.test(combined)) return "Writing";
   if (/\b(recruiter|\bhr\b|human resources|talent|people ops|people operations)\b/.test(combined)) return "HR";
-  if (/\b(manager|director|\bvp\b|head of|chief|\bcto\b|\bcpo\b|\bcoo\b)\b/.test(combined)) return "Management";
-  if (/\b(qa\b|quality assurance|tester|testing|automation test)\b/.test(combined)) return "QA";
+  if (/\b(manager|director|\bvp\b|head of|chief)\b/.test(combined)) return "Management";
   if (/\b(finance|legal|accounting|compliance|counsel|attorney|controller)\b/.test(combined)) return "Finance / Legal";
   return null;
 }
@@ -112,6 +131,31 @@ function normalizeRemoteOK(job) {
     description: stripHtml(job.description),
     source: "RemoteOK",
   };
+}
+
+// Non-US country indicators — if location matches any of these, exclude the job
+const NON_US_PATTERN = /\b(germany|deutschland|berlin|munich|frankfurt|hamburg|dach|europe|european|uk\b|united kingdom|london|manchester|france|paris|spain|madrid|barcelona|italy|netherlands|amsterdam|sweden|stockholm|norway|denmark|copenhagen|finland|helsinki|switzerland|zurich|austria|vienna|poland|warsaw|portugal|lisbon|ireland|dublin|belgium|czech|romania|hungary|greece|croatia|serbia|bulgaria|india|bangalore|mumbai|hyderabad|delhi|chennai|pune|china|beijing|shanghai|japan|tokyo|korea|seoul|singapore|hong kong|taiwan|philippines|manila|vietnam|indonesia|jakarta|malaysia|kuala lumpur|thailand|bangkok|brazil|s[aã]o paulo|mexico|colombia|bogot[aá]|argentina|buenos aires|chile|santiago|nigeria|lagos|kenya|nairobi|south africa|cape town|egypt|cairo|australia|sydney|melbourne|new zealand|auckland)\b/i;
+
+const US_POSITIVE = /\b(usa|united states|us\b|u\.s\.|north america|new york|san francisco|los angeles|seattle|austin|boston|chicago|denver|atlanta|miami|dallas|houston|portland|remote.us|remote,.us)\b/i;
+
+/**
+ * Returns true if the job appears US-based or truly worldwide remote.
+ */
+function isUSOrWorldwide(job) {
+  const loc = (job.location || "").toLowerCase();
+  // Explicitly US
+  if (US_POSITIVE.test(loc)) return true;
+  // Generic remote with no country restriction
+  if (/^remote$/i.test(loc.trim())) return true;
+  if (/worldwide|anywhere|global/i.test(loc)) return true;
+  // Check for non-US countries
+  if (NON_US_PATTERN.test(loc)) return false;
+  // Check tags for location hints
+  const tagStr = (job.tags || []).join(" ").toLowerCase();
+  if (US_POSITIVE.test(tagStr)) return true;
+  if (NON_US_PATTERN.test(tagStr)) return false;
+  // No location info — assume OK
+  return true;
 }
 
 function dedupKey(job) {
@@ -186,12 +230,17 @@ async function fetchAllJobs() {
 
   // Deduplicate by title+company
   const seen = new Set();
-  return normalized.filter(job => {
+  const deduped = normalized.filter(job => {
     const key = dedupKey(job);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Filter to US-based or worldwide remote only
+  const usFiltered = deduped.filter(isUSOrWorldwide);
+  console.log(`US/worldwide filter: ${deduped.length} → ${usFiltered.length}`);
+  return usFiltered;
 }
 
 // ── Location/preference filtering ────────────────────────────────────────────
