@@ -134,7 +134,7 @@ function normalizeRemoteOK(job) {
 }
 
 // Non-US country indicators — if location matches any of these, exclude the job
-const NON_US_PATTERN = /\b(germany|deutschland|berlin|munich|frankfurt|hamburg|dach|europe|european|uk\b|united kingdom|london|manchester|france|paris|spain|madrid|barcelona|italy|netherlands|amsterdam|sweden|stockholm|norway|denmark|copenhagen|finland|helsinki|switzerland|zurich|austria|vienna|poland|warsaw|portugal|lisbon|ireland|dublin|belgium|czech|romania|hungary|greece|croatia|serbia|bulgaria|india|bangalore|mumbai|hyderabad|delhi|chennai|pune|china|beijing|shanghai|japan|tokyo|korea|seoul|singapore|hong kong|taiwan|philippines|manila|vietnam|indonesia|jakarta|malaysia|kuala lumpur|thailand|bangkok|brazil|s[aã]o paulo|mexico|colombia|bogot[aá]|argentina|buenos aires|chile|santiago|nigeria|lagos|kenya|nairobi|south africa|cape town|egypt|cairo|australia|sydney|melbourne|new zealand|auckland)\b/i;
+const NON_US_PATTERN = /\b(germany|deutschland|berlin|munich|frankfurt|hamburg|dach|europe|european|uk\b|united kingdom|london|manchester|france|paris|spain|madrid|barcelona|italy|rome|milan|netherlands|amsterdam|sweden|stockholm|norway|denmark|copenhagen|finland|helsinki|switzerland|zurich|austria|vienna|poland|warsaw|portugal|lisbon|ireland|dublin|belgium|czech|prague|romania|bucharest|hungary|budapest|greece|athens|croatia|zagreb|serbia|belgrade|bulgaria|sofia|ukraine|kyiv|latvia|riga|lithuania|estonia|slovenia|slovakia|india|bangalore|bengaluru|mumbai|hyderabad|delhi|chennai|pune|china|beijing|shanghai|shenzhen|japan|tokyo|korea|seoul|singapore|hong kong|taiwan|philippines|manila|vietnam|ho chi minh|indonesia|jakarta|malaysia|kuala lumpur|thailand|bangkok|pakistan|karachi|lahore|sri lanka|bangladesh|brazil|s[aã]o paulo|rio de janeiro|mexico|guadalajara|colombia|bogot[aá]|medell[ií]n|argentina|buenos aires|chile|santiago|peru|lima|costa rica|uruguay|nigeria|lagos|kenya|nairobi|south africa|cape town|johannesburg|egypt|cairo|ghana|accra|morocco|australia|sydney|melbourne|brisbane|new zealand|auckland|israel|tel aviv|turkey|istanbul|ankara|dubai|uae|saudi|qatar|latam|apac|emea)\b/i;
 
 const US_POSITIVE = /\b(usa|united states|us\b|u\.s\.|north america|new york|san francisco|los angeles|seattle|austin|boston|chicago|denver|atlanta|miami|dallas|houston|portland|remote.us|remote,.us)\b/i;
 
@@ -143,17 +143,20 @@ const US_POSITIVE = /\b(usa|united states|us\b|u\.s\.|north america|new york|san
  */
 function isUSOrWorldwide(job) {
   const loc = (job.location || "").toLowerCase();
+  const title = (job.title || "").toLowerCase();
+  const allText = loc + " " + title + " " + (job.tags || []).join(" ").toLowerCase();
+
+  // Check title + location for non-US country indicators first
+  if (NON_US_PATTERN.test(allText)) {
+    // But allow if also explicitly US
+    if (US_POSITIVE.test(loc)) return true;
+    return false;
+  }
   // Explicitly US
   if (US_POSITIVE.test(loc)) return true;
   // Generic remote with no country restriction
   if (/^remote$/i.test(loc.trim())) return true;
   if (/worldwide|anywhere|global/i.test(loc)) return true;
-  // Check for non-US countries
-  if (NON_US_PATTERN.test(loc)) return false;
-  // Check tags for location hints
-  const tagStr = (job.tags || []).join(" ").toLowerCase();
-  if (US_POSITIVE.test(tagStr)) return true;
-  if (NON_US_PATTERN.test(tagStr)) return false;
   // No location info — assume OK
   return true;
 }
