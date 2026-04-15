@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, authFetch } from "./supabaseClient";
 
 const SANS  = "'DM Sans', 'Helvetica Neue', sans-serif";
 const SERIF = "'DM Serif Display', serif";
@@ -113,6 +113,57 @@ function JobCard({ job, hasProfile }) {
   );
 }
 
+function SignInModal({ onClose, onSignedIn }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (err) throw err;
+      onSignedIn(data.user);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "11px 14px", fontSize: 14, fontFamily: SANS,
+    border: `1px solid ${BORDER}`, borderRadius: 8, outline: "none",
+    background: BG, color: TEXT, marginBottom: 12,
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: BG, borderRadius: 16, padding: "32px 28px", width: 380, maxWidth: "92vw", boxShadow: "0 8px 48px rgba(0,0,0,0.14)" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: TEAL, fontWeight: 600, marginBottom: 6, fontFamily: SANS }}>Welcome Back</div>
+        <h2 style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 400, color: TEXT, margin: "0 0 4px" }}>Sign in to see your match</h2>
+        <p style={{ fontSize: 13, color: MUTED, margin: "0 0 20px", fontFamily: SANS, lineHeight: 1.5 }}>Log in with your candidate account to see personality match scores on every job listing.</p>
+        <form onSubmit={handleSubmit}>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required style={inputStyle} />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required style={inputStyle} />
+          {error && <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 10, fontFamily: SANS }}>{error}</div>}
+          <button type="submit" disabled={loading} style={{
+            width: "100%", padding: "11px", fontSize: 14, fontWeight: 600,
+            fontFamily: SANS, background: TEAL, color: "#fff", border: "none",
+            borderRadius: 8, cursor: loading ? "wait" : "pointer",
+            opacity: loading ? 0.7 : 1,
+          }}>{loading ? "Signing in..." : "Sign In"}</button>
+        </form>
+        <div style={{ marginTop: 14, textAlign: "center", fontSize: 12, color: MUTED2, fontFamily: SANS }}>
+          Don't have an account? <a href="/assessment?retake=true" style={{ color: TEAL, textDecoration: "none", fontWeight: 600 }}>Take the assessment</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
   const [total, setTotal] = useState(0);
@@ -122,6 +173,7 @@ export default function JobsPage() {
   const [workType, setWorkType] = useState("all");
   const [ocean, setOcean] = useState(null);
   const [hasProfile, setHasProfile] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   // Check for existing candidate profile
   useEffect(() => {
@@ -136,6 +188,18 @@ export default function JobsPage() {
       } catch {}
     }
   }, []);
+
+  const handleSignedIn = async (user) => {
+    setShowSignIn(false);
+    try {
+      const res = await authFetch(`/api/save-candidate?userId=${encodeURIComponent(user.id)}`);
+      const json = await res.json();
+      if (json.candidate?.ocean) {
+        setOcean(json.candidate.ocean);
+        setHasProfile(true);
+      }
+    } catch {}
+  };
 
   // Fetch jobs
   useEffect(() => {
@@ -192,12 +256,11 @@ export default function JobsPage() {
             <span style={{ fontFamily: SERIF, fontSize: 20, color: TEXT }}>WiredFor<span style={{ color: TEAL }}>.ai</span></span>
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <a href="/assessment" style={{ textDecoration: "none", fontSize: 13, color: MUTED, fontFamily: SANS, padding: "7px 13px" }}>Assessment</a>
             {!hasProfile && (
-              <a href="/assessment?retake=true" style={{
-                textDecoration: "none", background: TEAL, color: "#fff",
+              <button onClick={() => setShowSignIn(true)} style={{
+                background: TEAL, color: "#fff", border: "none", cursor: "pointer",
                 fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, fontFamily: SANS,
-              }}>Get Matched</a>
+              }}>Sign In</button>
             )}
           </div>
         </div>
@@ -279,6 +342,10 @@ export default function JobsPage() {
           Jobs aggregated from Remotive, RemoteOK, and Findwork.dev · Updated every 6 hours
         </div>
       </footer>
+
+      {showSignIn && (
+        <SignInModal onClose={() => setShowSignIn(false)} onSignedIn={handleSignedIn} />
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
