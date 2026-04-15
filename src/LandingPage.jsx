@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { useAuthState, NavUserMenu } from "./NavUser.jsx";
 
 const BOOKING_URL = "https://calendly.com/wiredforai";
 
@@ -654,6 +655,7 @@ export default function LandingPage() {
   const px = mobile ? "20px" : w < 1100 ? "48px" : "80px";
   const maxW = 1080;
   const [modal, setModal] = useState(null); // null | "signin" | "get-started"
+  const { auth, checked } = useAuthState();
 
   return (
     <div style={{ background: T.bg, minHeight: "100vh", fontFamily: T.sans, color: T.t1, overflowX: "hidden" }}>
@@ -706,22 +708,28 @@ export default function LandingPage() {
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setModal("signin")} style={{
-              background: "none", border: "none", color: T.t2, fontSize: 14, fontFamily: T.sans,
-              padding: "7px 13px", borderRadius: 7, transition: "color 0.15s", cursor: "pointer",
-            }}
-              onMouseEnter={e => e.currentTarget.style.color = T.t1}
-              onMouseLeave={e => e.currentTarget.style.color = T.t2}
-            >Sign In</button>
-            <button onClick={() => setModal("get-started")} style={{
-              background: T.teal, color: "#fff", border: "none",
-              fontSize: 13, fontWeight: 600, padding: "9px 18px", borderRadius: 8,
-              transition: "opacity 0.15s", letterSpacing: "-0.01em", fontFamily: T.sans,
-              display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
-            }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-            >Get Started <Arrow color="#fff" size={12} /></button>
+            {checked && auth ? (
+              <NavUserMenu auth={auth} />
+            ) : checked ? (
+              <>
+                <button onClick={() => setModal("signin")} style={{
+                  background: "none", border: "none", color: T.t2, fontSize: 14, fontFamily: T.sans,
+                  padding: "7px 13px", borderRadius: 7, transition: "color 0.15s", cursor: "pointer",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.color = T.t1}
+                  onMouseLeave={e => e.currentTarget.style.color = T.t2}
+                >Sign In</button>
+                <button onClick={() => setModal("get-started")} style={{
+                  background: T.teal, color: "#fff", border: "none",
+                  fontSize: 13, fontWeight: 600, padding: "9px 18px", borderRadius: 8,
+                  transition: "opacity 0.15s", letterSpacing: "-0.01em", fontFamily: T.sans,
+                  display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                >Get Started <Arrow color="#fff" size={12} /></button>
+              </>
+            ) : null}
           </div>
         </div>
       </header>

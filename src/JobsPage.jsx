@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase, authFetch } from "./supabaseClient";
+import { useAuthState, NavUserMenu } from "./NavUser.jsx";
 
 const SANS  = "'DM Sans', 'Helvetica Neue', sans-serif";
 const SERIF = "'DM Serif Display', serif";
@@ -165,6 +166,7 @@ function SignInModal({ onClose, onSignedIn }) {
 }
 
 export default function JobsPage() {
+  const { auth, checked: authChecked } = useAuthState();
   const [jobs, setJobs] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -256,12 +258,14 @@ export default function JobsPage() {
             <span style={{ fontFamily: SERIF, fontSize: 20, color: TEXT }}>WiredFor<span style={{ color: TEAL }}>.ai</span></span>
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {!hasProfile && (
+            {authChecked && auth ? (
+              <NavUserMenu auth={auth} />
+            ) : authChecked && !hasProfile ? (
               <button onClick={() => setShowSignIn(true)} style={{
                 background: TEAL, color: "#fff", border: "none", cursor: "pointer",
                 fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, fontFamily: SANS,
               }}>Sign In</button>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
