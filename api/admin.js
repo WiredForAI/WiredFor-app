@@ -265,7 +265,8 @@ export default async function handler(req, res) {
   // ── POST invite-candidate ────────────────────────────────────────────────
   if (req.method === "POST" && action === "invite-candidate") {
     const { wfId, email } = req.body;
-    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email" });
+    console.log("[invite-candidate] body:", JSON.stringify({ action: req.body.action, wfId, email, hasWfId: !!wfId, hasEmail: !!email }));
+    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email", received: { wfId: wfId || null, email: email || null } });
 
     // Save email to candidate record
     const { error: updateErr } = await supabase
