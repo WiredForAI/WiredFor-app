@@ -455,6 +455,110 @@ function SimulateModal({ onClose, onSaved, onGenerated }) {
   );
 }
 
+// ── Claim Profile Panel ───────────────────────────────────────────────────
+function ClaimProfilePanel({ candidate: c, userId, inviteEmail, setInviteEmail, inviteState, setInviteState, inviteError, setInviteError, onUpdated }) {
+  const hasEmail = !!(c.email || inviteState === "sent");
+  const isEditing = inviteState === "editing";
+
+  const saveEmail = async () => {
+    setInviteState("saving"); setInviteError("");
+    try {
+      const res = await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update-candidate-email", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setInviteState("idle");
+      if (onUpdated) onUpdated();
+    } catch (err) {
+      setInviteState("error"); setInviteError(err.message);
+    }
+  };
+
+  const sendInvite = async (emailOverride) => {
+    setInviteState("sending"); setInviteError("");
+    try {
+      const res = await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: (emailOverride || inviteEmail).trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setInviteState("sent");
+      if (onUpdated) onUpdated();
+    } catch (err) {
+      setInviteState("error"); setInviteError(err.message);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 24, padding: "14px 16px", background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.15)", borderRadius: 10 }}>
+      <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: PURPLE, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Claim Profile</div>
+
+      {inviteState === "sent" && !isEditing ? (
+        <div style={{ fontSize: 13, color: ACCENT, fontFamily: SANS }}>Invite sent to {inviteEmail || c.email}!</div>
+      ) : hasEmail && !isEditing ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, color: TEXT, fontFamily: SANS }}>{c.email}</span>
+          <button onClick={() => { setInviteEmail(c.email); setInviteState("editing"); setInviteError(""); }} style={{
+            background: "none", border: `1px solid ${BORDER}`, borderRadius: 5,
+            fontSize: 11, color: MUTED, cursor: "pointer", padding: "3px 8px", fontFamily: SANS,
+          }}>Edit</button>
+          <button
+            disabled={inviteState === "sending"}
+            onClick={() => sendInvite(c.email)}
+            style={{
+              background: PURPLE, color: "#fff", border: "none", borderRadius: 5,
+              fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "3px 10px", fontFamily: SANS,
+              opacity: inviteState === "sending" ? 0.6 : 1,
+            }}
+          >{inviteState === "sending" ? "Sending..." : "Resend Invite"}</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <input
+            type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+            placeholder="Enter candidate's email..."
+            style={{ flex: 1, minWidth: 180, padding: "8px 12px", fontSize: 13, fontFamily: SANS, border: `1px solid ${BORDER}`, borderRadius: 6, outline: "none", background: BG }}
+          />
+          {isEditing ? (
+            <>
+              <button disabled={inviteState === "saving" || !inviteEmail.trim()} onClick={saveEmail} style={{
+                padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
+                cursor: inviteState === "saving" ? "wait" : "pointer",
+                opacity: inviteState === "saving" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+              }}>{inviteState === "saving" ? "Saving..." : "Save Email"}</button>
+              <button disabled={inviteState === "sending" || !inviteEmail.trim()} onClick={() => sendInvite()} style={{
+                padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
+                cursor: inviteState === "sending" ? "wait" : "pointer",
+                opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+              }}>{inviteState === "sending" ? "Sending..." : "Save & Resend"}</button>
+              <button onClick={() => setInviteState("idle")} style={{
+                padding: "8px 12px", fontSize: 12, fontFamily: SANS,
+                background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
+                color: MUTED, cursor: "pointer", whiteSpace: "nowrap",
+              }}>Cancel</button>
+            </>
+          ) : (
+            <button disabled={inviteState === "sending" || !inviteEmail.trim()} onClick={() => sendInvite()} style={{
+              padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+              background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
+              cursor: inviteState === "sending" ? "wait" : "pointer",
+              opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1, whiteSpace: "nowrap",
+            }}>{inviteState === "sending" ? "Sending..." : "Add Email & Invite"}</button>
+          )}
+        </div>
+      )}
+      {inviteError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6, fontFamily: SANS }}>{inviteError}</div>}
+    </div>
+  );
+}
+
 // ── Candidate Drawer ──────────────────────────────────────────────────────
 function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
   const [tab, setTab] = useState(0);
@@ -574,128 +678,12 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
           </div>
 
           {/* Invite / Claim Profile — shown for profiles without a linked user_id */}
-          {c.archetype && !c.user_id && (() => {
-            const hasEmail = !!(c.email || inviteState === "sent");
-            const isEditing = inviteState === "editing";
-            const showInput = !hasEmail || isEditing;
-
-            const saveEmail = async () => {
-              setInviteState("saving"); setInviteError("");
-              try {
-                const res = await authFetch("/api/admin", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "update-candidate-email", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed");
-                setInviteState("idle");
-                if (onUpdated) onUpdated();
-              } catch (err) {
-                setInviteState("error"); setInviteError(err.message);
-              }
-            };
-
-            const sendInvite = async (emailOverride) => {
-              setInviteState("sending"); setInviteError("");
-              try {
-                const res = await authFetch("/api/admin", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: (emailOverride || inviteEmail).trim() }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed");
-                setInviteState("sent");
-                if (onUpdated) onUpdated();
-              } catch (err) {
-                setInviteState("error"); setInviteError(err.message);
-              }
-            };
-
-            return (
-              <div style={{ marginBottom: 24, padding: "14px 16px", background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.15)", borderRadius: 10 }}>
-                <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: PURPLE, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Claim Profile</div>
-
-                {inviteState === "sent" && !isEditing ? (
-                  <div style={{ fontSize: 13, color: ACCENT, fontFamily: SANS }}>Invite sent to {inviteEmail || c.email}!</div>
-                ) : hasEmail && !isEditing ? (
-                  /* Show current email with Edit and Resend */
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: TEXT, fontFamily: SANS }}>{c.email}</span>
-                      <button onClick={() => { setInviteEmail(c.email); setInviteState("editing"); setInviteError(""); }} style={{
-                        background: "none", border: `1px solid ${BORDER}`, borderRadius: 5,
-                        fontSize: 11, color: MUTED, cursor: "pointer", padding: "3px 8px", fontFamily: SANS,
-                      }}>Edit</button>
-                      <button
-                        disabled={inviteState === "sending"}
-                        onClick={() => { setInviteEmail(c.email); sendInvite(); }}
-                        style={{
-                          background: PURPLE, color: "#fff", border: "none", borderRadius: 5,
-                          fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "3px 10px", fontFamily: SANS,
-                          opacity: inviteState === "sending" ? 0.6 : 1,
-                        }}
-                      >{inviteState === "sending" ? "Sending..." : "Resend Invite"}</button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Email input — new or editing */
-                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
-                    <input
-                      type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-                      placeholder="Enter candidate's email..."
-                      style={{ flex: 1, minWidth: 180, padding: "8px 12px", fontSize: 13, fontFamily: SANS, border: `1px solid ${BORDER}`, borderRadius: 6, outline: "none", background: BG }}
-                    />
-                    {isEditing ? (
-                      <>
-                        <button
-                          disabled={inviteState === "saving" || !inviteEmail.trim()}
-                          onClick={saveEmail}
-                          style={{
-                            padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
-                            background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
-                            cursor: inviteState === "saving" ? "wait" : "pointer",
-                            opacity: inviteState === "saving" || !inviteEmail.trim() ? 0.6 : 1,
-                            whiteSpace: "nowrap",
-                          }}
-                        >{inviteState === "saving" ? "Saving..." : "Save Email"}</button>
-                        <button
-                          disabled={inviteState === "sending" || !inviteEmail.trim()}
-                          onClick={() => sendInvite()}
-                          style={{
-                            padding: "8px 14px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
-                            background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
-                            cursor: inviteState === "sending" ? "wait" : "pointer",
-                            opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
-                            whiteSpace: "nowrap",
-                          }}
-                        >{inviteState === "sending" ? "Sending..." : "Save & Resend"}</button>
-                        <button onClick={() => setInviteState("idle")} style={{
-                          padding: "8px 12px", fontSize: 12, fontFamily: SANS,
-                          background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
-                          color: MUTED, cursor: "pointer", whiteSpace: "nowrap",
-                        }}>Cancel</button>
-                      </>
-                    ) : (
-                      <button
-                        disabled={inviteState === "sending" || !inviteEmail.trim()}
-                        onClick={() => sendInvite()}
-                        style={{
-                          padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
-                          background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
-                          cursor: inviteState === "sending" ? "wait" : "pointer",
-                          opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
-                          whiteSpace: "nowrap",
-                        }}
-                      >{inviteState === "sending" ? "Sending..." : "Add Email & Invite"}</button>
-                    )}
-                  </div>
-                )}
-                {inviteError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6, fontFamily: SANS }}>{inviteError}</div>}
-              </div>
-            );
-          })()}
+          {c.archetype && !c.user_id && <ClaimProfilePanel
+            candidate={c} userId={userId} inviteEmail={inviteEmail} setInviteEmail={setInviteEmail}
+            inviteState={inviteState} setInviteState={setInviteState}
+            inviteError={inviteError} setInviteError={setInviteError}
+            onUpdated={onUpdated}
+          />}
 
           {/* ── Tab 0: Profile ─────────────────────────────────────────────── */}
           {tab === 0 && (
