@@ -279,11 +279,18 @@ export default async function handler(req, res) {
 
     // Send magic link via Supabase auth — redirects to /claim?wfId=XXX
     const redirectUrl = `https://www.wiredfor.ai/claim?wfId=${encodeURIComponent(wfId)}`;
-    const { error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
+    const { data: inviteData, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,
       data: { wf_id: wfId, user_type: "candidate" },
     });
-    if (inviteErr) return res.status(500).json({ error: inviteErr.message });
+    console.log("[invite-candidate] inviteUserByEmail result:", JSON.stringify({ data: inviteData, error: inviteErr }));
+    if (inviteErr) return res.status(500).json({
+      error: inviteErr.message,
+      code: inviteErr.code || null,
+      status: inviteErr.status || null,
+      name: inviteErr.name || null,
+      full: JSON.stringify(inviteErr),
+    });
 
     return res.status(200).json({ success: true });
   }
