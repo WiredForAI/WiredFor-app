@@ -456,9 +456,12 @@ function SimulateModal({ onClose, onSaved, onGenerated }) {
 }
 
 // ── Candidate Drawer ──────────────────────────────────────────────────────
-function CandidateDrawer({ candidate: c, onClose }) {
+function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
   const [tab, setTab] = useState(0);
   const [showCandidateView, setShowCandidateView] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteState, setInviteState] = useState("idle"); // idle | sending | sent | error
+  const [inviteError, setInviteError] = useState("");
   if (!c) return null;
 
   // Normalize OCEAN to long keys (matches CareerMatch display)
@@ -569,6 +572,51 @@ function CandidateDrawer({ candidate: c, onClose }) {
               </div>
             ))}
           </div>
+
+          {/* Invite / Claim Profile */}
+          {!c.email && c.archetype && (
+            <div style={{ marginBottom: 24, padding: "14px 16px", background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.15)", borderRadius: 10 }}>
+              <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: PURPLE, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Claim Profile</div>
+              {inviteState === "sent" ? (
+                <div style={{ fontSize: 13, color: ACCENT, fontFamily: SANS }}>Invite sent! They'll receive a magic link to claim their profile.</div>
+              ) : (
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <input
+                    type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="Enter candidate's email..."
+                    style={{ flex: 1, minWidth: 180, padding: "8px 12px", fontSize: 13, fontFamily: SANS, border: `1px solid ${BORDER}`, borderRadius: 6, outline: "none", background: BG }}
+                  />
+                  <button
+                    disabled={inviteState === "sending" || !inviteEmail.trim()}
+                    onClick={async () => {
+                      setInviteState("sending"); setInviteError("");
+                      try {
+                        const res = await authFetch("/api/admin", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "invite-candidate", userId, wfId: c.wf_id, email: inviteEmail.trim() }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Failed");
+                        setInviteState("sent");
+                        if (onUpdated) onUpdated();
+                      } catch (err) {
+                        setInviteState("error"); setInviteError(err.message);
+                      }
+                    }}
+                    style={{
+                      padding: "8px 16px", fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                      background: PURPLE, color: "#fff", border: "none", borderRadius: 6,
+                      cursor: inviteState === "sending" ? "wait" : "pointer",
+                      opacity: inviteState === "sending" || !inviteEmail.trim() ? 0.6 : 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >{inviteState === "sending" ? "Sending..." : "Add Email & Invite"}</button>
+                </div>
+              )}
+              {inviteError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6, fontFamily: SANS }}>{inviteError}</div>}
+            </div>
+          )}
 
           {/* ── Tab 0: Profile ─────────────────────────────────────────────── */}
           {tab === 0 && (
@@ -1352,6 +1400,8 @@ export default function AdminPage() {
         <CandidateDrawer
           candidate={selectedCandidate}
           onClose={() => setSelectedCandidate(null)}
+          onUpdated={() => load(userId)}
+          userId={userId}
         />
       )}
     </div>

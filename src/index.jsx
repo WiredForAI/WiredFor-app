@@ -6,12 +6,14 @@ import AdminPage from "./AdminPage.jsx";
 import LandingPage from "./LandingPage.jsx";
 import PreviewMode from "./PreviewMode.jsx";
 import JobsPage from "./JobsPage.jsx";
+import ClaimProfile from "./ClaimProfile.jsx";
 
 const path = window.location.pathname;
 
 const App = path.startsWith("/admin")      ? AdminPage
   : path.startsWith("/employer")           ? EmployerDashboard
   : path.startsWith("/preview")            ? PreviewMode
+  : path.startsWith("/claim")              ? ClaimProfile
   : path.startsWith("/jobs")               ? JobsPage
   : path.startsWith("/assessment")         ? CareerMatch
   : path === "/"                           ? LandingPage
