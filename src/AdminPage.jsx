@@ -783,6 +783,44 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
           {/* ── Tab 2: My Path ─────────────────────────────────────────────── */}
           {tab === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {c.career_paths && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 16, borderRadius: 2, background: PURPLE, flexShrink: 0 }} />
+                    <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: PURPLE, fontFamily: SANS }}>Your Three Paths</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {[
+                      { key: "bestFitNow", label: "Best Fit Now",  color: ACCENT,  bg: "rgba(0,196,168,0.06)",  border: "rgba(0,196,168,0.20)" },
+                      { key: "wiredFor",   label: "Wired For",     color: PURPLE,  bg: "rgba(107,79,255,0.06)", border: "rgba(107,79,255,0.20)" },
+                      { key: "yourPivot",  label: "Your Pivot",    color: "#F55D2C", bg: "rgba(245,93,44,0.06)",  border: "rgba(245,93,44,0.20)" },
+                    ].map(({ key, label, color, bg, border }) => {
+                      const paths = typeof c.career_paths === "string" ? JSON.parse(c.career_paths) : c.career_paths;
+                      const path = paths?.[key];
+                      if (!path) return null;
+                      return (
+                        <div key={key} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, padding: "16px 14px" }}>
+                          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color, marginBottom: 6, fontWeight: 700, fontFamily: SANS }}>{label}</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.3, fontFamily: SANS }}>{path.headline}</div>
+                          <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.72, margin: "0 0 12px", fontFamily: SANS }}>{path.description}</p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            {(path.roles || []).map((role, i) => (
+                              <div key={i} style={{ background: "rgba(255,255,255,0.65)", borderRadius: 10, padding: "12px 12px" }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: TEXT, marginBottom: 4, fontFamily: SANS }}>{role.title}</div>
+                                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginBottom: 5, fontFamily: SANS }}>{role.whyItFits}</div>
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                  <span style={{ fontSize: 11, color, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>→</span>
+                                  <span style={{ fontSize: 11, color: "#4A4A4A", lineHeight: 1.5, fontFamily: SANS }}>{role.nextStep}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {c.career_clarity && (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
