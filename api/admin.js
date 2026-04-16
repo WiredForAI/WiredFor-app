@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { requireAdmin, cors } from "./_lib/auth.js";
+import { ARCHETYPES } from "../src/archetypes.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -264,35 +265,180 @@ export default async function handler(req, res) {
   }
 
   // ── POST invite-candidate ────────────────────────────────────────────────
+  // No Supabase auth calls — just save email + send via Resend with a claim URL.
+  // The candidate signs up on the /claim page; that page links their user_id.
   if (req.method === "POST" && action === "invite-candidate") {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const { wfId, email } = body;
-    console.log("[invite-candidate] bodyType:", typeof req.body, "parsed:", JSON.stringify({ wfId, email }));
-    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email", received: { wfId: wfId || null, email: email || null }, bodyType: typeof req.body });
+    console.log("[invite-candidate] parsed:", JSON.stringify({ wfId, email }));
+    if (!wfId || !email) return res.status(400).json({ error: "Missing wfId or email" });
 
-    // Save email to candidate record
-    const { error: updateErr } = await supabase
+    // 1. Save email to candidate record
+    const { data: candidate, error: updateErr } = await supabase
       .from("candidates")
       .update({ email, updated_at: new Date().toISOString() })
-      .eq("wf_id", wfId);
+      .eq("wf_id", wfId)
+      .select("archetype")
+      .single();
     if (updateErr) return res.status(500).json({ error: updateErr.message });
 
-    // Send magic link via Supabase auth — redirects to /claim?wfId=XXX
-    const redirectUrl = `https://www.wiredfor.ai/claim?wfId=${encodeURIComponent(wfId)}`;
-    const { data: inviteData, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: redirectUrl,
-      data: { wf_id: wfId, user_type: "candidate" },
+    // 2. Look up tagline from the archetype framework
+    const archetype = candidate?.archetype || "";
+    const archetypeDef = ARCHETYPES.find(a => a.name === archetype);
+    const tagline = archetypeDef?.tagline || "";
+
+    // 3. Send invite email via Resend — no Supabase auth involved
+    const claimUrl = `https://wiredfor.ai/claim?wfId=${encodeURIComponent(wfId)}`;
+    const category = archetypeDef?.category?.toUpperCase() || "";
+    const subject = `Your WiredFor.ai profile is ready${archetype ? `, ${archetype}` : ""}`;
+    const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<title>WiredFor.ai</title>
+<!--[if mso]><style>table,td{font-family:Arial,sans-serif!important;}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f2;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<!-- Outer wrapper for background color -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f2;">
+<tr><td align="center" style="padding:24px 16px;">
+
+<!-- Main container 560px -->
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;border-collapse:collapse;">
+
+  <!-- HEADER — white, centered wordmark -->
+  <tr>
+    <td align="center" style="background-color:#ffffff;padding:28px 24px 24px;border-radius:12px 12px 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:400;color:#0A0A0A;letter-spacing:0.02em;">
+            Wired<span style="font-weight:700;">For</span><span style="color:#00C4A8;">.</span>ai
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- HERO — dark bg, archetype reveal -->
+  <tr>
+    <td align="center" style="background-color:#0A0A0A;padding:44px 32px 48px;">
+      ${category ? `
+      <!-- Category badge -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:18px;">
+        <tr>
+          <td style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#00C4A8;background-color:rgba(0,196,168,0.12);padding:5px 14px;border-radius:20px;border:1px solid rgba(0,196,168,0.25);">
+            ${category}
+          </td>
+        </tr>
+      </table>
+      ` : ""}
+      <!-- Archetype name -->
+      <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:400;color:#ffffff;margin:0 0 10px;line-height:1.2;">
+        ${archetype || "Your Archetype"}
+      </h1>
+      ${tagline ? `
+      <!-- Tagline -->
+      <p style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;font-style:italic;color:#00C4A8;margin:0;line-height:1.5;">
+        ${tagline}
+      </p>
+      ` : ""}
+    </td>
+  </tr>
+
+  <!-- BODY — white, description + CTA -->
+  <tr>
+    <td align="center" style="background-color:#ffffff;padding:36px 32px 16px;">
+      <p style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.7;color:#333333;margin:0 0 28px;max-width:440px;">
+        Your profile through WiredFor.ai is complete and your results are in.
+        Click below to claim your free profile and see your full personality breakdown,
+        best-fit tech roles, and career roadmap.
+      </p>
+      <!-- CTA Button -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 32px;">
+        <tr>
+          <td align="center" style="background-color:#00C4A8;border-radius:10px;">
+            <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${claimUrl}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="21%" fillcolor="#00C4A8" stroke="f"><v:textbox inset="0,0,0,0"><center style="font-size:14px;font-weight:700;color:#0A0A0A;font-family:Arial,sans-serif;">Claim My Profile &rarr;</center></v:textbox></v:roundrect><![endif]-->
+            <!--[if !mso]><!-->
+            <a href="${claimUrl}" target="_blank" style="display:inline-block;background-color:#00C4A8;color:#0A0A0A;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;letter-spacing:0.02em;">
+              Claim My Profile &rarr;
+            </a>
+            <!--<![endif]-->
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FEATURES LIST — white -->
+  <tr>
+    <td style="background-color:#ffffff;padding:0 32px 36px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:360px;margin:0 auto;">
+        <tr>
+          <td style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333333;padding:8px 0;line-height:1.5;">
+            <span style="color:#00C4A8;font-size:15px;margin-right:8px;">&#10003;</span> Your Big Five personality profile
+          </td>
+        </tr>
+        <tr>
+          <td style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333333;padding:8px 0;line-height:1.5;border-top:1px solid #f0f0ee;">
+            <span style="color:#00C4A8;font-size:15px;margin-right:8px;">&#10003;</span> Best-fit tech roles matched to your wiring
+          </td>
+        </tr>
+        <tr>
+          <td style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333333;padding:8px 0;line-height:1.5;border-top:1px solid #f0f0ee;">
+            <span style="color:#00C4A8;font-size:15px;margin-right:8px;">&#10003;</span> Your complete career roadmap
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER — light gray -->
+  <tr>
+    <td align="center" style="background-color:#f9f9f7;padding:28px 32px 24px;border-radius:0 0 12px 12px;border-top:1px solid #eeeee9;">
+      <p style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:#999999;line-height:1.7;margin:0 0 14px;max-width:380px;">
+        Your profile is completely free. Your identity stays private until you choose to share it.
+        <br>&mdash; The WiredFor.ai Team
+      </p>
+      <a href="https://wiredfor.ai" target="_blank" style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#00C4A8;text-decoration:none;letter-spacing:0.03em;">
+        wiredfor.ai
+      </a>
+    </td>
+  </tr>
+
+</table>
+<!-- /Main container -->
+
+</td></tr>
+</table>
+<!-- /Outer wrapper -->
+</body>
+</html>`;
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "hello@wiredfor.ai",
+        to: email,
+        subject,
+        html,
+      }),
     });
-    console.log("[invite-candidate] inviteUserByEmail result:", JSON.stringify({ data: inviteData, error: inviteErr }));
-    if (inviteErr) return res.status(500).json({
-      error: inviteErr.message,
-      code: inviteErr.code || null,
-      status: inviteErr.status || null,
-      name: inviteErr.name || null,
-      full: JSON.stringify(inviteErr),
+    const resendData = await resendRes.json().catch(() => ({}));
+    console.log("[invite-candidate] resend result:", resendRes.status, JSON.stringify(resendData));
+    if (!resendRes.ok) return res.status(500).json({
+      error: resendData?.message || "Resend send failed",
+      resendStatus: resendRes.status,
+      resend: resendData,
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, id: resendData?.id });
   }
 
   return res.status(405).json({ error: "Method or action not allowed" });

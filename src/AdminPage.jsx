@@ -487,6 +487,7 @@ function ClaimProfilePanel({ candidate: c, userId, onUpdated }) {
 
   const sendInvite = async (emailOverride) => {
     const emailToSend = (emailOverride || emailRef.current).trim();
+    console.log("SUBMIT CLICKED - email state:", email, "| emailRef:", emailRef.current, "| emailOverride:", emailOverride, "| emailToSend:", emailToSend, "| wfId:", c.wf_id);
     setState("sending"); setError("");
     try {
       const res = await authFetch("/api/admin", {
