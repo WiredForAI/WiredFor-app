@@ -821,6 +821,38 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
                   </div>
                 </div>
               )}
+              {!c.career_paths && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 16, borderRadius: 2, background: PURPLE, flexShrink: 0 }} />
+                    <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: PURPLE, fontFamily: SANS }}>Your Three Paths</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    {[
+                      { label: "Best Fit Now",  color: ACCENT,  bg: "rgba(0,196,168,0.06)",  border: "rgba(0,196,168,0.20)" },
+                      { label: "Wired For",     color: PURPLE,  bg: "rgba(107,79,255,0.06)", border: "rgba(107,79,255,0.20)" },
+                      { label: "Your Pivot",    color: "#F55D2C", bg: "rgba(245,93,44,0.06)",  border: "rgba(245,93,44,0.20)" },
+                    ].map(({ label, color, bg, border }) => (
+                      <div key={label} style={{ position: "relative", borderRadius: 14, overflow: "hidden" }}>
+                        <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color, fontWeight: 700, marginBottom: 8, fontFamily: SANS }}>{label}</div>
+                        <div style={{ filter: "blur(6px)", WebkitFilter: "blur(6px)", userSelect: "none", WebkitUserSelect: "none", pointerEvents: "none" }}>
+                          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, padding: "16px 14px" }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 6, lineHeight: 1.3, fontFamily: SANS }}>Personalized career headline</div>
+                            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.72, margin: "0 0 12px", fontFamily: SANS }}>A detailed description of why this path fits the candidate's unique personality wiring, based on their OCEAN scores and work style preferences.</p>
+                            <div style={{ background: "rgba(255,255,255,0.65)", borderRadius: 10, padding: "12px 12px" }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: TEXT, marginBottom: 4, fontFamily: SANS }}>Senior Role Title</div>
+                              <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, fontFamily: SANS }}>Why this role matches the candidate's personality and background.</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ position: "absolute", inset: 0, top: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ background: ACCENT, color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 8, fontFamily: SANS, boxShadow: "0 2px 12px rgba(0,196,168,0.3)" }}>Candidate has not uploaded resume yet</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {c.career_clarity && (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -847,6 +879,33 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
                     ))}
                   </div>
                 </div>
+              )}
+              {!c.career_clarity && !c.growth_path && !c.career_paths && (
+                <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS }}>No path data — candidate predates new fields.</div>
+              )}
+            </div>
+          )}
+
+          {/* ── Tab 3: Interview Prep ──────────────────────────────────────── */}
+          {tab === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {Array.isArray(c.interview_intelligence) && c.interview_intelligence.length > 0 ? (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ width: 3, height: 16, borderRadius: 2, background: ORANGE, flexShrink: 0 }} />
+                    <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: ORANGE, fontFamily: SANS }}>Interview Intelligence</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {c.interview_intelligence.map((bullet, i) => (
+                      <div key={i} style={{ background: "rgba(245,93,44,0.04)", border: "1px solid rgba(245,93,44,0.14)", borderRadius: 12, padding: "14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <span style={{ color: ORANGE, fontSize: 12, flexShrink: 0, marginTop: 2 }}>▸</span>
+                        <span style={{ color: MUTED, fontSize: 13, lineHeight: 1.7, fontFamily: SANS }}>{bullet}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS }}>No interview data — candidate predates new fields.</div>
               )}
               {Array.isArray(c.environments_to_avoid) && c.environments_to_avoid.length > 0 && (
                 <div>
@@ -879,33 +938,6 @@ function CandidateDrawer({ candidate: c, onClose, onUpdated, userId }) {
                     ))}
                   </div>
                 </div>
-              )}
-              {!c.career_clarity && !c.growth_path && (
-                <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS }}>No path data — candidate predates new fields.</div>
-              )}
-            </div>
-          )}
-
-          {/* ── Tab 3: Interview Prep ──────────────────────────────────────── */}
-          {tab === 3 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              {Array.isArray(c.interview_intelligence) && c.interview_intelligence.length > 0 ? (
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 3, height: 16, borderRadius: 2, background: ORANGE, flexShrink: 0 }} />
-                    <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: ORANGE, fontFamily: SANS }}>Interview Intelligence</div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {c.interview_intelligence.map((bullet, i) => (
-                      <div key={i} style={{ background: "rgba(245,93,44,0.04)", border: "1px solid rgba(245,93,44,0.14)", borderRadius: 12, padding: "14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
-                        <span style={{ color: ORANGE, fontSize: 12, flexShrink: 0, marginTop: 2 }}>▸</span>
-                        <span style={{ color: MUTED, fontSize: 13, lineHeight: 1.7, fontFamily: SANS }}>{bullet}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS }}>No interview data — candidate predates new fields.</div>
               )}
             </div>
           )}
