@@ -715,7 +715,13 @@ function RolesTab({ result, resumeMismatches, jobs, jobsLoading, jobsError, jobs
   );
 }
 
-function PathTab({ result, careerPaths }) {
+function PathTab({ result, careerPaths, onSwitchTab }) {
+  const PATH_DEFS = [
+    { key: "bestFitNow", label: "Best Fit Now",  color: "#00C4A8", bg: "rgba(0,196,168,0.06)",  border: "rgba(0,196,168,0.20)" },
+    { key: "wiredFor",   label: "Wired For",     color: "#6B4FFF", bg: "rgba(107,79,255,0.06)", border: "rgba(107,79,255,0.20)" },
+    { key: "yourPivot",  label: "Your Pivot",    color: "#F55D2C", bg: "rgba(245,93,44,0.06)",  border: "rgba(245,93,44,0.20)" },
+  ];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       {careerPaths && (
@@ -725,11 +731,7 @@ function PathTab({ result, careerPaths }) {
             <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#6B4FFF" }}>Your Three Paths</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {[
-              { key: "bestFitNow", label: "Best Fit Now",  color: "#00C4A8", bg: "rgba(0,196,168,0.06)",  border: "rgba(0,196,168,0.20)" },
-              { key: "wiredFor",   label: "Wired For",     color: "#6B4FFF", bg: "rgba(107,79,255,0.06)", border: "rgba(107,79,255,0.20)" },
-              { key: "yourPivot",  label: "Your Pivot",    color: "#F55D2C", bg: "rgba(245,93,44,0.06)",  border: "rgba(245,93,44,0.20)" },
-            ].map(({ key, label, color, bg, border }) => {
+            {PATH_DEFS.map(({ key, label, color, bg, border }) => {
               const path = careerPaths[key];
               if (!path) return null;
               return (
@@ -757,11 +759,35 @@ function PathTab({ result, careerPaths }) {
       )}
 
       {!careerPaths && (
-        <div style={{ background: "rgba(107,79,255,0.04)", border: "1px dashed rgba(107,79,255,0.22)", borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 22, marginBottom: 8 }}>🗺️</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#0A0A0A", marginBottom: 6 }}>Your Three Career Paths</div>
-          <div style={{ fontSize: 13, color: "#6B6B6B", lineHeight: 1.65 }}>
-            Upload your resume in the <strong>Profile</strong> tab to unlock personalized career paths based on your background + personality.
+        <div>
+          <div style={{ background: "rgba(0,196,168,0.04)", border: "1px solid rgba(0,196,168,0.16)", borderRadius: 12, padding: "20px 18px", marginBottom: 20 }}>
+            <p style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.72, margin: 0 }}>
+              Upload your resume to unlock your three career paths — <strong>Best Fit Now</strong>, <strong>Wired For</strong>, and <strong>Your Pivot</strong>. We'll combine your personality profile with your background to map out exactly where you should go next.
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {PATH_DEFS.map(({ key, label, color, bg, border }) => (
+              <div key={key} style={{ position: "relative", borderRadius: 14, overflow: "hidden" }}>
+                <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color, fontWeight: 700, marginBottom: 8 }}>{label}</div>
+                <div style={{ filter: "blur(6px)", WebkitFilter: "blur(6px)", userSelect: "none", WebkitUserSelect: "none", pointerEvents: "none" }}>
+                  <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 14, padding: "18px 16px" }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#0A0A0A", marginBottom: 8, lineHeight: 1.3 }}>Your personalized career headline</div>
+                    <p style={{ fontSize: 13, color: "#6B6B6B", lineHeight: 1.72, margin: "0 0 14px" }}>A detailed description of why this path fits your unique personality wiring, based on your OCEAN scores and work style preferences. This content is generated from your resume and personality profile.</p>
+                    <div style={{ background: "rgba(255,255,255,0.65)", borderRadius: 10, padding: "13px 14px" }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#0A0A0A", marginBottom: 5 }}>Senior Role Title</div>
+                      <div style={{ fontSize: 13, color: "#6B6B6B", lineHeight: 1.6 }}>Why this specific role matches your personality and background.</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ position: "absolute", inset: 0, top: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button onClick={() => onSwitchTab && onSwitchTab(0)} style={{
+                    background: "#00C4A8", color: "#fff", border: "none", cursor: "pointer",
+                    fontSize: 13, fontWeight: 600, padding: "10px 20px", borderRadius: 8,
+                    boxShadow: "0 2px 12px rgba(0,196,168,0.3)",
+                  }}>Upload Resume to Unlock →</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -794,6 +820,38 @@ function PathTab({ result, careerPaths }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PrepTab({ result }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      {result.interviewIntelligence && result.interviewIntelligence.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 3, height: 18, borderRadius: 2, background: "#F55D2C", flexShrink: 0 }} />
+            <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#F55D2C" }}>Interview Intelligence</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {result.interviewIntelligence.map((bullet, i) => (
+              <div key={i} style={{ background: "rgba(245,93,44,0.04)", border: "1px solid rgba(245,93,44,0.14)", borderRadius: 12, padding: "16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span style={{ color: "#F55D2C", fontSize: 12, flexShrink: 0, marginTop: 3 }}>▸</span>
+                <span style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.72 }}>{bullet}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <div style={{ width: 3, height: 18, borderRadius: 2, background: "#6B4FFF", flexShrink: 0 }} />
+          <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#6B4FFF" }}>Culture Match</div>
+        </div>
+        <div style={{ background: "linear-gradient(135deg, rgba(0,196,168,0.06), rgba(107,79,255,0.06))", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "22px 20px" }}>
+          <p style={{ color: "#6B6B6B", fontSize: 14, lineHeight: 1.75, margin: 0 }}>{result.cultureFit}</p>
+        </div>
+      </div>
 
       {result.environmentsToAvoid && result.environmentsToAvoid.length > 0 && (
         <div>
@@ -837,38 +895,6 @@ function PathTab({ result, careerPaths }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function PrepTab({ result }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-      {result.interviewIntelligence && result.interviewIntelligence.length > 0 && (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 3, height: 18, borderRadius: 2, background: "#F55D2C", flexShrink: 0 }} />
-            <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#F55D2C" }}>Interview Intelligence</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {result.interviewIntelligence.map((bullet, i) => (
-              <div key={i} style={{ background: "rgba(245,93,44,0.04)", border: "1px solid rgba(245,93,44,0.14)", borderRadius: 12, padding: "16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <span style={{ color: "#F55D2C", fontSize: 12, flexShrink: 0, marginTop: 3 }}>▸</span>
-                <span style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.72 }}>{bullet}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <div style={{ width: 3, height: 18, borderRadius: 2, background: "#6B4FFF", flexShrink: 0 }} />
-          <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#6B4FFF" }}>Culture Match</div>
-        </div>
-        <div style={{ background: "linear-gradient(135deg, rgba(0,196,168,0.06), rgba(107,79,255,0.06))", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "22px 20px" }}>
-          <p style={{ color: "#6B6B6B", fontSize: 14, lineHeight: 1.75, margin: 0 }}>{result.cultureFit}</p>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1157,6 +1183,7 @@ function Dashboard({
     <PathTab key="path"
       result={result}
       careerPaths={careerPaths}
+      onSwitchTab={setTab}
     />,
     <PrepTab key="prep" result={result} />,
   ];
