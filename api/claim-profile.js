@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     const { data, error } = await supabase
       .from("candidates")
-      .select("wf_id, archetype, archetype_category, operating_style")
+      .select("wf_id, archetype, archetype_category, operating_style, email")
       .eq("wf_id", wfId)
       .maybeSingle();
 

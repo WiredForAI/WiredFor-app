@@ -28,6 +28,7 @@ export default function ClaimProfile() {
         const json = await res.json();
         if (!json.candidate) { setState("error"); setError("Profile not found."); return; }
         setCandidate(json.candidate);
+        if (json.candidate.email) setEmail(json.candidate.email);
 
         // If already signed in, try to link immediately
         const { data: { session } } = await supabase.auth.getSession();
@@ -154,15 +155,17 @@ export default function ClaimProfile() {
           </span>
         )}
         <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, margin: "16px 0 28px" }}>
-          Sign up with the email this invite was sent to and your profile will be linked automatically.
+          Create a password to claim your free profile and see your full personality breakdown, matched roles, and career roadmap.
         </p>
 
         <form onSubmit={handleSignup} style={{ textAlign: "left", maxWidth: 340, margin: "0 auto" }}>
           <label style={{ display: "block", fontSize: 12, color: MUTED, marginBottom: 4, fontWeight: 500 }}>Email</label>
           <input
-            type="email" required value={email} onChange={e => setEmail(e.target.value)}
+            type="email" required value={email}
+            readOnly={!!candidate?.email}
+            onChange={candidate?.email ? undefined : e => setEmail(e.target.value)}
             placeholder="you@example.com"
-            style={{ width: "100%", padding: "10px 14px", fontSize: 14, fontFamily: SANS, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, marginBottom: 14, outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "10px 14px", fontSize: 14, fontFamily: SANS, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, marginBottom: 14, outline: "none", boxSizing: "border-box", ...(candidate?.email ? { background: "#f4f4f2", color: "#333", cursor: "default" } : {}) }}
           />
           <label style={{ display: "block", fontSize: 12, color: MUTED, marginBottom: 4, fontWeight: 500 }}>Create a password</label>
           <input
