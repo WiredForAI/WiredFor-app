@@ -1495,7 +1495,7 @@ export default function CareerMatch() {
     if (!file) return;
     const allowedTypes = ["application/pdf", "text/plain"];
     if (!allowedTypes.includes(file.type)) { setResumeError("Please upload a PDF or text file."); return; }
-    if (file.size > 5 * 1024 * 1024)       { setResumeError("File must be under 5MB."); return; }
+    if (file.size > 3 * 1024 * 1024)       { setResumeError("File must be under 3MB. Try re-saving your PDF without images."); return; }
     setResumeError(null);
     setResumeFileName(file.name);
     setResumeUploading(true);
@@ -1515,8 +1515,13 @@ export default function CareerMatch() {
             operatingStyle: result.operatingStyle,
           }),
         });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error("resume API error:", res.status, errText.slice(0, 500));
+          if (res.status === 413) throw new Error("File too large — try a smaller PDF (under 3MB).");
+          throw new Error(`Analysis failed (${res.status})`);
+        }
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Analysis failed");
         window.gtag?.("event", "resume_uploaded");
         const newResumeData  = data.resumeData || null;
         const newCareerPaths = data.careerPaths || null;
@@ -1526,8 +1531,8 @@ export default function CareerMatch() {
         setResumeMismatches(newMismatches);
         handleResumeAnalyzed({ resumeData: newResumeData, careerPaths: newCareerPaths, mismatches: newMismatches });
       } catch (err) {
-        setResumeError("Analysis failed — please try again.");
-        console.error("resume analysis error:", err.message);
+        setResumeError(err.message || "Analysis failed — please try again.");
+        console.error("resume analysis error:", err);
       } finally {
         setResumeUploading(false);
       }

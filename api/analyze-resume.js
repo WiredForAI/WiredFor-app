@@ -16,6 +16,10 @@ export default async function handler(req, res) {
   if (!fileBase64) return res.status(400).json({ error: "Missing fileBase64" });
   if (!ocean || !archetype) return res.status(400).json({ error: "Missing candidate profile" });
 
+  // Log payload size for debugging upload issues
+  const payloadSizeKB = Math.round(Buffer.byteLength(fileBase64, "utf8") / 1024);
+  console.log(`[analyze-resume] fileType=${fileType} base64Size=${payloadSizeKB}KB user=${user.id}`);
+
   const isPDF = (fileType || "").includes("pdf");
 
   const systemPrompt = `You are a precise career analyst. Extract structured data from a resume and generate personalized career paths based on BOTH the resume background AND the candidate's OCEAN personality profile.
