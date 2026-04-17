@@ -495,6 +495,10 @@ function UserTypeModal({ mode, onClose }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleTypeSelect = (type) => {
     if (mode === "get-started") {
@@ -520,6 +524,24 @@ function UserTypeModal({ mode, onClose }) {
       setError(err.message);
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) return;
+    setResetLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail.trim() }),
+      });
+      if (!res.ok) throw new Error("Something went wrong. Please try again.");
+      setResetSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setResetLoading(false);
   };
 
   const tileStyle = (active) => ({
@@ -618,7 +640,72 @@ function UserTypeModal({ mode, onClose }) {
                   fontFamily: T.sans, outline: "none", boxSizing: "border-box",
                 }}
               />
+              {!forgotMode && (
+                <button
+                  onClick={() => { setForgotMode(true); setResetEmail(email); setError(""); }}
+                  style={{ background: "none", border: "none", color: T.teal, fontSize: 13, cursor: "pointer", fontFamily: T.sans, padding: 0, textAlign: "right", marginTop: -4 }}
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
+
+            {forgotMode && (
+              <div style={{
+                background: T.bg2, border: "1px solid rgba(0,196,168,0.20)", borderRadius: 12,
+                padding: "20px 18px", marginBottom: 20,
+              }}>
+                {resetSent ? (
+                  <div>
+                    <p style={{ color: T.t2, fontSize: 14, lineHeight: 1.65, margin: "0 0 12px", fontFamily: T.sans }}>
+                      Check your email — we sent you a password reset link.
+                    </p>
+                    <button
+                      onClick={() => { setForgotMode(false); setResetSent(false); setResetEmail(""); }}
+                      style={{ background: "none", border: "none", color: T.teal, fontSize: 13, cursor: "pointer", fontFamily: T.sans, padding: 0 }}
+                    >
+                      Back to sign in
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T.t1, marginBottom: 10, fontFamily: T.sans }}>Reset your password</div>
+                    <input
+                      type="email" placeholder="Email address" value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
+                      autoComplete="email"
+                      style={{
+                        width: "100%", background: T.bg2, border: "1px solid rgba(0,0,0,0.10)",
+                        borderRadius: 10, padding: "12px 14px", color: T.t1, fontSize: 15,
+                        fontFamily: T.sans, outline: "none", boxSizing: "border-box", marginBottom: 12,
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        onClick={handleForgotPassword}
+                        disabled={resetLoading || !resetEmail.trim()}
+                        style={{
+                          padding: "10px 20px", borderRadius: 10,
+                          background: (resetLoading || !resetEmail.trim()) ? T.bg2 : T.teal,
+                          border: "none", color: (resetLoading || !resetEmail.trim()) ? T.t3 : "#fff",
+                          fontSize: 13, fontWeight: 600, cursor: (resetLoading || !resetEmail.trim()) ? "default" : "pointer",
+                          fontFamily: T.sans,
+                        }}
+                      >
+                        {resetLoading ? "Sending..." : "Send Reset Link"}
+                      </button>
+                      <button
+                        onClick={() => { setForgotMode(false); setError(""); }}
+                        style={{ background: "none", border: "none", color: T.t2, fontSize: 13, cursor: "pointer", fontFamily: T.sans }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {error && (
               <div style={{
