@@ -1192,7 +1192,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── REVIEWS SECTION ─────────────────────────────────────���────────── */}
-      {reviews.length >= 3 && (
+      {reviews.length >= 1 && (
         <section style={{ background: T.bg2, padding: mobile ? "80px 20px" : `96px ${px}` }}>
           <div style={{ maxWidth: maxW, margin: "0 auto" }}>
             <Label>What candidates say</Label>
