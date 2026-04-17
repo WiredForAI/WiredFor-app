@@ -7,16 +7,18 @@ import LandingPage from "./LandingPage.jsx";
 import PreviewMode from "./PreviewMode.jsx";
 import JobsPage from "./JobsPage.jsx";
 import ClaimProfile from "./ClaimProfile.jsx";
+import ResetPassword from "./ResetPassword.jsx";
 
 const path = window.location.pathname;
 
-const App = path.startsWith("/admin")      ? AdminPage
-  : path.startsWith("/employer")           ? EmployerDashboard
-  : path.startsWith("/preview")            ? PreviewMode
-  : path.startsWith("/claim")              ? ClaimProfile
-  : path.startsWith("/jobs")               ? JobsPage
-  : path.startsWith("/assessment")         ? CareerMatch
-  : path === "/"                           ? LandingPage
+const App = path.startsWith("/admin")          ? AdminPage
+  : path.startsWith("/reset-password")         ? ResetPassword
+  : path.startsWith("/employer")               ? EmployerDashboard
+  : path.startsWith("/preview")                ? PreviewMode
+  : path.startsWith("/claim")                  ? ClaimProfile
+  : path.startsWith("/jobs")                   ? JobsPage
+  : path.startsWith("/assessment")             ? CareerMatch
+  : path === "/"                               ? LandingPage
   : LandingPage;
 
 createRoot(document.getElementById("root")).render(

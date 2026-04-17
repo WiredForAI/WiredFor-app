@@ -1263,6 +1263,10 @@ function EmployerAuth({ onComplete }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) return;
@@ -1283,6 +1287,24 @@ function EmployerAuth({ onComplete }) {
       setError(err.message);
     }
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) return;
+    setResetLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail.trim() }),
+      });
+      if (!res.ok) throw new Error("Something went wrong. Please try again.");
+      setResetSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setResetLoading(false);
   };
 
   return (
@@ -1333,7 +1355,70 @@ function EmployerAuth({ onComplete }) {
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             style={inputStyle}
           />
+          {mode === "login" && !forgotMode && (
+            <button
+              onClick={() => { setForgotMode(true); setResetEmail(email); setError(""); }}
+              style={{ background: "none", border: "none", color: ACCENT, fontSize: 13, cursor: "pointer", fontFamily: SANS, padding: 0, textAlign: "right", marginTop: -4 }}
+            >
+              Forgot Password?
+            </button>
+          )}
         </div>
+
+        {forgotMode && (
+          <div style={{
+            background: BG2, border: `1px solid rgba(0,196,168,0.20)`, borderRadius: 12,
+            padding: "20px 18px", marginBottom: 20,
+          }}>
+            {resetSent ? (
+              <div>
+                <p style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.65, margin: "0 0 12px", fontFamily: SANS }}>
+                  Check your email — we sent you a password reset link.
+                </p>
+                <button
+                  onClick={() => { setForgotMode(false); setResetSent(false); setResetEmail(""); }}
+                  style={{ background: "none", border: "none", color: ACCENT, fontSize: 13, cursor: "pointer", fontFamily: SANS, padding: 0 }}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 10, fontFamily: SANS }}>Reset your password</div>
+                <input
+                  type="email"
+                  placeholder="Work email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
+                  autoComplete="email"
+                  style={{ ...inputStyle, marginBottom: 12 }}
+                />
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading || !resetEmail.trim()}
+                    style={{
+                      padding: "10px 20px", borderRadius: 10,
+                      background: (resetLoading || !resetEmail.trim()) ? BG2 : ACCENT,
+                      border: "none", color: (resetLoading || !resetEmail.trim()) ? MUTED2 : "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: (resetLoading || !resetEmail.trim()) ? "default" : "pointer",
+                      fontFamily: SANS,
+                    }}
+                  >
+                    {resetLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button
+                    onClick={() => { setForgotMode(false); setError(""); }}
+                    style={{ background: "none", border: "none", color: MUTED, fontSize: 13, cursor: "pointer", fontFamily: SANS }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div style={{

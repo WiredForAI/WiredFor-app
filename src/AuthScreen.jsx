@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, authFetch } from "./supabaseClient";
 
 const authStyles = `
   .auth-container {
@@ -117,6 +117,10 @@ export default function AuthScreen({ wfId, onComplete }) {
   const [workPreference, setWorkPreference] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) return;
@@ -151,6 +155,24 @@ export default function AuthScreen({ wfId, onComplete }) {
     }
 
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) return;
+    setResetLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail.trim() }),
+      });
+      if (!res.ok) throw new Error("Something went wrong. Please try again.");
+      setResetSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setResetLoading(false);
   };
 
   return (
@@ -212,6 +234,14 @@ export default function AuthScreen({ wfId, onComplete }) {
             onKeyDown={e => e.key === "Enter" && handleSubmit()}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
           />
+          {mode === "login" && !forgotMode && (
+            <button
+              onClick={() => { setForgotMode(true); setResetEmail(email); setError(""); }}
+              style={{ background: "none", border: "none", color: "#00C4A8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: 0, textAlign: "right", marginTop: -4 }}
+            >
+              Forgot Password?
+            </button>
+          )}
 
           {/* Location + work preference — signup only */}
           {mode === "signup" && (
@@ -245,6 +275,62 @@ export default function AuthScreen({ wfId, onComplete }) {
             </>
           )}
         </div>
+
+        {forgotMode && (
+          <div style={{
+            background: "#F7F7F5", border: "1px solid rgba(0,196,168,0.20)", borderRadius: 12,
+            padding: "20px 18px", marginBottom: 20,
+          }}>
+            {resetSent ? (
+              <div>
+                <p style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.65, margin: "0 0 12px" }}>
+                  Check your email — we sent you a password reset link.
+                </p>
+                <button
+                  onClick={() => { setForgotMode(false); setResetSent(false); setResetEmail(""); }}
+                  style={{ background: "none", border: "none", color: "#00C4A8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: 0 }}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0A0A0A", marginBottom: 10 }}>Reset your password</div>
+                <input
+                  className="auth-input"
+                  type="email"
+                  placeholder="Email address"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
+                  autoComplete="email"
+                  style={{ marginBottom: 12 }}
+                />
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={resetLoading || !resetEmail.trim()}
+                    style={{
+                      padding: "10px 20px", borderRadius: 10,
+                      background: (resetLoading || !resetEmail.trim()) ? "#E8E8E8" : "#00C4A8",
+                      border: "none", color: (resetLoading || !resetEmail.trim()) ? "#9B9B9B" : "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: (resetLoading || !resetEmail.trim()) ? "default" : "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {resetLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button
+                    onClick={() => { setForgotMode(false); setError(""); }}
+                    style={{ background: "none", border: "none", color: "#6B6B6B", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div style={{
