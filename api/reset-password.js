@@ -38,12 +38,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true });
     }
 
-    // Extract the action link from Supabase's response
-    const resetUrl = data?.properties?.action_link;
-    if (!resetUrl) {
+    // Extract the action link and rewrite localhost if Supabase Site URL is misconfigured
+    const rawLink = data?.properties?.action_link;
+    if (!rawLink) {
       console.error("[reset-password] No action_link in response");
       return res.status(200).json({ success: true });
     }
+    const resetUrl = rawLink.replace(/https?:\/\/localhost(:\d+)?/g, "https://wiredfor.ai");
 
     // Look up user_type for the email subject line
     const { data: userData } = await supabaseAdmin.auth.admin.getUserById(data.user.id);
