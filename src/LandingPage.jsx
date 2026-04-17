@@ -743,6 +743,13 @@ export default function LandingPage() {
   const maxW = 1080;
   const [modal, setModal] = useState(null); // null | "signin" | "get-started"
   const { auth, checked } = useAuthState();
+  const [reviews, setReviews] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/reviews").then(r => r.json()).then(d => {
+      if (d.reviews) setReviews(d.reviews);
+    }).catch(() => {});
+  }, []);
 
   return (
     <div style={{ background: T.bg, minHeight: "100vh", fontFamily: T.sans, color: T.t1, overflowX: "hidden" }}>
@@ -1183,6 +1190,59 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── REVIEWS SECTION ─────────────────────────────────────���────────── */}
+      {reviews.length >= 3 && (
+        <section style={{ background: T.bg2, padding: mobile ? "80px 20px" : `96px ${px}` }}>
+          <div style={{ maxWidth: maxW, margin: "0 auto" }}>
+            <Label>What candidates say</Label>
+            <SectionHeading mobile={mobile}>Real profiles. Real people.</SectionHeading>
+            <p style={{ fontSize: 16, color: T.t2, lineHeight: 1.7, maxWidth: 560, margin: "0 0 48px", fontFamily: T.sans }}>
+              Anonymous by default — every review is from a verified WiredFor.ai candidate.
+            </p>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: mobile ? "1fr" : w < 1024 ? "1fr 1fr" : "1fr 1fr 1fr",
+              gap: 16,
+            }}>
+              {reviews.slice(0, mobile ? 3 : w < 1024 ? 4 : 6).map((r, i) => {
+                const catColors = { Builder: T.teal, Leader: T.purple, Connector: "#FFBE0B", Specialist: T.orange };
+                const catColor = catColors[r.category] || T.t3;
+                return (
+                  <div key={i} style={{
+                    background: T.bg, border: `1px solid ${T.border}`, borderRadius: 16,
+                    padding: "22px 20px", display: "flex", flexDirection: "column",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: T.t1, fontFamily: T.sans, lineHeight: 1.3 }}>{r.archetype}</div>
+                        {r.job_title && <div style={{ fontSize: 12, color: T.t3, fontFamily: T.sans, marginTop: 2 }}>{r.job_title}</div>}
+                      </div>
+                      {r.category && (
+                        <span style={{
+                          fontSize: 9, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700,
+                          color: catColor, background: `${catColor}14`, padding: "3px 10px", borderRadius: 10,
+                          fontFamily: T.sans, flexShrink: 0, marginLeft: 12,
+                        }}>{r.category}</span>
+                      )}
+                    </div>
+                    <div style={{ color: "#FFBE0B", fontSize: 15, marginBottom: 12, letterSpacing: 2 }}>
+                      {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
+                    </div>
+                    <div style={{ width: "100%", height: 1, background: T.border, marginBottom: 12 }} />
+                    {r.review_text && (
+                      <p style={{
+                        fontSize: 14, color: T.t2, lineHeight: 1.65, margin: 0,
+                        fontStyle: "italic", fontFamily: T.sans, flex: 1,
+                      }}>"{r.review_text}"</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── DUAL CTA SECTION ─────────────────────────────────────────────── */}
       <section style={{ background: T.bg, padding: mobile ? "80px 20px" : `96px ${px}` }}>

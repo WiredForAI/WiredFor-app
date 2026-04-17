@@ -441,5 +441,47 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, id: resendData?.id });
   }
 
+  // ── GET dash-reviews ──────────────────────────────────────────────────────
+  if (req.method === "GET" && action === "dash-reviews") {
+    const { data, error } = await supabase
+      .from("candidate_reviews")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ reviews: data || [] });
+  }
+
+  // ── POST approve-review / reject-review ─────────────────────────────────
+  if (req.method === "POST" && (action === "approve-review" || action === "reject-review")) {
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { reviewId } = body;
+    if (!reviewId) return res.status(400).json({ error: "Missing reviewId" });
+
+    const approved = action === "approve-review";
+    const { error: updateErr } = await supabase
+      .from("candidate_reviews")
+      .update({ approved })
+      .eq("id", reviewId);
+
+    if (updateErr) return res.status(500).json({ error: updateErr.message });
+    return res.status(200).json({ success: true });
+  }
+
+  // ── POST delete-review ──────────────────────────────────────────────────
+  if (req.method === "POST" && action === "delete-review") {
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { reviewId } = body;
+    if (!reviewId) return res.status(400).json({ error: "Missing reviewId" });
+
+    const { error: delErr } = await supabase
+      .from("candidate_reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (delErr) return res.status(500).json({ error: delErr.message });
+    return res.status(200).json({ success: true });
+  }
+
   return res.status(405).json({ error: "Method or action not allowed" });
 }

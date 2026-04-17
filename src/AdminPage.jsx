@@ -1275,6 +1275,123 @@ function ProfilePreviewOverlay({ profile, wfId, onClose }) {
   );
 }
 
+// ── Reviews Tab ──────────────────────────────────────────────────────────
+const CATEGORY_COLORS = { Builder: ACCENT, Leader: PURPLE, Connector: "#FFBE0B", Specialist: "#F55D2C" };
+
+function ReviewsTab({ reviews, onRefresh }) {
+  const [filter, setFilter] = useState("pending");
+  const [acting, setActing] = useState(null);
+
+  const filtered = reviews.filter(r => {
+    if (filter === "pending") return !r.approved;
+    if (filter === "approved") return r.approved === true;
+    return true;
+  });
+
+  const handleAction = async (reviewId, action) => {
+    setActing(reviewId);
+    try {
+      await authFetch(`/api/admin?action=${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewId }),
+      });
+      onRefresh();
+    } catch (err) {
+      console.error("review action error:", err);
+    }
+    setActing(null);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {["pending", "approved", "all"].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            background: filter === f ? ACCENT : "rgba(0,0,0,0.04)",
+            color: filter === f ? "#fff" : MUTED,
+            border: "none", borderRadius: 8, padding: "6px 16px",
+            fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+            textTransform: "capitalize",
+          }}>{f} ({reviews.filter(r => f === "all" ? true : f === "pending" ? !r.approved : r.approved === true).length})</button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS, padding: "40px 0", textAlign: "center" }}>
+          No {filter} reviews.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {filtered.map(r => {
+            const catColor = CATEGORY_COLORS[r.category] || MUTED;
+            return (
+              <div key={r.id} style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "16px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: SANS }}>{r.archetype || "—"}</div>
+                    <div style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>{r.job_title || "No title"} · {r.wf_id}</div>
+                  </div>
+                  {r.category && (
+                    <span style={{
+                      fontSize: 10, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700,
+                      color: catColor, background: `${catColor}18`, padding: "3px 10px", borderRadius: 12,
+                      fontFamily: SANS,
+                    }}>{r.category}</span>
+                  )}
+                </div>
+                <div style={{ color: "#FFBE0B", fontSize: 16, marginBottom: 6, letterSpacing: 2 }}>
+                  {"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}
+                </div>
+                {r.review_text && (
+                  <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.65, margin: "0 0 12px", fontStyle: "italic", fontFamily: SANS }}>"{r.review_text}"</p>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <span style={{ fontSize: 11, color: MUTED2, fontFamily: SANS }}>
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </span>
+                  {r.approved && (
+                    <span style={{ fontSize: 10, color: ACCENT, fontWeight: 700, fontFamily: SANS }}>APPROVED</span>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  {!r.approved && (
+                    <button
+                      onClick={() => handleAction(r.id, "approve-review")}
+                      disabled={acting === r.id}
+                      style={{
+                        background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
+                        padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                      }}
+                    >Approve</button>
+                  )}
+                  {r.approved && (
+                    <button
+                      onClick={() => handleAction(r.id, "reject-review")}
+                      disabled={acting === r.id}
+                      style={{
+                        background: "rgba(245,93,44,0.08)", color: ORANGE, border: "none", borderRadius: 6,
+                        padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                      }}
+                    >Reject</button>
+                  )}
+                  <button
+                    onClick={() => handleAction(r.id, "delete-review")}
+                    disabled={acting === r.id}
+                    style={{
+                      background: "none", color: MUTED2, border: `1px solid ${BORDER}`, borderRadius: 6,
+                      padding: "5px 12px", fontSize: 12, cursor: "pointer", fontFamily: SANS,
+                    }}
+                  >Delete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {
   const [userId, setUserId] = useState(null);
@@ -1284,6 +1401,7 @@ export default function AdminPage() {
   const [candidates, setCandidates] = useState([]);
   const [employers, setEmployers] = useState([]);
   const [intros, setIntros] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showConnect, setShowConnect]       = useState(false);
   const [showSimulate, setShowSimulate]     = useState(false);
@@ -1316,16 +1434,18 @@ export default function AdminPage() {
   const load = useCallback(async (uid) => {
     if (!uid) return;
     setLoading(true);
-    const [statsRes, candRes, empRes, introRes] = await Promise.all([
+    const [statsRes, candRes, empRes, introRes, reviewsRes] = await Promise.all([
       authFetch(`/api/admin?action=dash-stats&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-candidates&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-employers&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-intros&userId=${uid}`).then(r => r.json()),
+      authFetch(`/api/admin?action=dash-reviews&userId=${uid}`).then(r => r.json()),
     ]);
     setStats(statsRes);
     setCandidates(candRes.candidates || []);
     setEmployers(empRes.employers || []);
     setIntros(introRes.intros || []);
+    setReviews(reviewsRes.reviews || []);
     setLoading(false);
   }, []);
 
@@ -1486,6 +1606,7 @@ export default function AdminPage() {
             { id: "candidates", label: `Candidates${candidates.length ? ` (${candidates.length})` : ""}` },
             { id: "employers", label: `Employers${employers.length ? ` (${employers.length})` : ""}` },
             { id: "intros", label: `Intros${intros.length ? ` (${intros.length})` : ""}` },
+            { id: "reviews", label: `Reviews${reviews.length ? ` (${reviews.length})` : ""}` },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               background: "none", border: "none", cursor: "pointer",
@@ -1511,6 +1632,9 @@ export default function AdminPage() {
                   onRefresh={refreshIntros}
                   onNewIntro={() => setShowConnect(true)}
                 />
+              )}
+              {tab === "reviews" && (
+                <ReviewsTab reviews={reviews} onRefresh={() => load(userId)} />
               )}
             </>
           )}

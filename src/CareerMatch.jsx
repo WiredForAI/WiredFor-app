@@ -1154,6 +1154,99 @@ const TAB_DEFS = [
   { label: "Prep",    icon: "🎤", short: "Prep" },
 ];
 
+function ReviewPrompt({ wfId, result }) {
+  const storageKey = `wf_reviewed_${wfId}`;
+  const [dismissed, setDismissed] = useState(() => !!localStorage.getItem(storageKey));
+  const [stars, setStars] = useState(0);
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  if (dismissed) return null;
+
+  const handleSubmit = async () => {
+    if (!stars) return;
+    setSubmitting(true);
+    try {
+      await authFetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wfId,
+          archetype: result.archetype,
+          category: result.archetypeCategory || null,
+          jobTitle: result.resumeData?.currentTitle || null,
+          stars,
+          reviewText: text.trim() || null,
+        }),
+      });
+      setSubmitted(true);
+      localStorage.setItem(storageKey, "1");
+      setTimeout(() => setDismissed(true), 2000);
+    } catch (err) {
+      console.error("review submit error:", err);
+    }
+    setSubmitting(false);
+  };
+
+  const handleDismiss = () => {
+    localStorage.setItem(storageKey, "1");
+    setDismissed(true);
+  };
+
+  if (submitted) {
+    return (
+      <div style={{ background: "rgba(0,196,168,0.06)", border: "1px solid rgba(0,196,168,0.18)", borderRadius: 14, padding: "16px 18px", marginBottom: 20, textAlign: "center" }}>
+        <span style={{ fontSize: 14, color: "#00C4A8", fontWeight: 600 }}>Thanks for your feedback!</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.14)", borderRadius: 14, padding: "18px 18px 16px", marginBottom: 20, position: "relative" }}>
+      <button onClick={handleDismiss} style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#9B9B9B", fontSize: 18, cursor: "pointer", lineHeight: 1, padding: 2 }}>×</button>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#0A0A0A", marginBottom: 8 }}>How accurate was your profile?</div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <button key={i} onClick={() => setStars(i)} style={{
+            background: "none", border: "none", cursor: "pointer", fontSize: 22, padding: "0 2px",
+            color: i <= stars ? "#FFBE0B" : "#D4D4D4", transition: "color 0.1s",
+          }}>★</button>
+        ))}
+      </div>
+      {stars > 0 && (
+        <>
+          <input
+            type="text"
+            placeholder="Short feedback (optional, 150 chars max)"
+            value={text}
+            onChange={e => setText(e.target.value.slice(0, 150))}
+            maxLength={150}
+            style={{
+              width: "100%", background: "#F7F7F5", border: "1px solid rgba(0,0,0,0.08)",
+              borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#0A0A0A",
+              fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif", outline: "none",
+              boxSizing: "border-box", marginBottom: 10,
+            }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              style={{
+                background: "#00C4A8", color: "#fff", border: "none", borderRadius: 8,
+                padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: submitting ? "default" : "pointer",
+                fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+              }}
+            >{submitting ? "Sending..." : "Submit"}</button>
+            <span style={{ fontSize: 11, color: "#9B9B9B" }}>{text.length}/150</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Dashboard({
   result, wfId, onRetake,
   jobs, jobsLoading, jobsError, jobsVisible, onLoadJobs,
@@ -1221,6 +1314,9 @@ function Dashboard({
             </div>
             <button className="cm-retake-btn" onClick={onRetake}>Retake</button>
           </div>
+
+          {/* Review prompt */}
+          <ReviewPrompt wfId={wfId} result={result} />
 
           {/* Desktop top tabs */}
           <div className="wf-dash-top-tabs">
