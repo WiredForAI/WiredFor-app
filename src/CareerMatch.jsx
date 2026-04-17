@@ -573,7 +573,7 @@ function ResumeUploadBlock({ resumeData, resumeUploading, resumeError, resumeFil
 
 // ── Tab content components ───────────────────────────────────────────────────
 
-function ProfileTab({ result, resumeData, resumeUploading, resumeError, resumeFileName, onResumeUpload }) {
+function ProfileTab({ result, wfId, resumeData, resumeUploading, resumeError, resumeFileName, onResumeUpload }) {
   return (
     <div>
       {/* Archetype */}
@@ -622,6 +622,10 @@ function ProfileTab({ result, resumeData, resumeUploading, resumeError, resumeFi
           onResumeUpload={onResumeUpload}
         />
       </div>
+
+      {/* Review prompt — after full profile */}
+      <div style={{ width: "100%", height: 1, background: "rgba(0,0,0,0.06)", margin: "32px 0" }} />
+      <ReviewPrompt wfId={wfId} result={result} />
     </div>
   );
 }
@@ -1258,6 +1262,7 @@ function Dashboard({
   const tabContent = [
     <ProfileTab key="profile"
       result={result}
+      wfId={wfId}
       resumeData={resumeData}
       resumeUploading={resumeUploading}
       resumeError={resumeError}
@@ -1314,9 +1319,6 @@ function Dashboard({
             </div>
             <button className="cm-retake-btn" onClick={onRetake}>Retake</button>
           </div>
-
-          {/* Review prompt */}
-          <ReviewPrompt wfId={wfId} result={result} />
 
           {/* Desktop top tabs */}
           <div className="wf-dash-top-tabs">
