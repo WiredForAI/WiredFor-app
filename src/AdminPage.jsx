@@ -1434,19 +1434,22 @@ export default function AdminPage() {
   const load = useCallback(async (uid) => {
     if (!uid) return;
     setLoading(true);
-    const [statsRes, candRes, empRes, introRes, reviewsRes] = await Promise.all([
+    const [statsRes, candRes, empRes, introRes] = await Promise.all([
       authFetch(`/api/admin?action=dash-stats&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-candidates&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-employers&userId=${uid}`).then(r => r.json()),
       authFetch(`/api/admin?action=dash-intros&userId=${uid}`).then(r => r.json()),
-      authFetch(`/api/admin?action=dash-reviews&userId=${uid}`).then(r => r.json()),
     ]);
     setStats(statsRes);
     setCandidates(candRes.candidates || []);
     setEmployers(empRes.employers || []);
     setIntros(introRes.intros || []);
-    setReviews(reviewsRes.reviews || []);
     setLoading(false);
+    // Fetch reviews separately so a missing table doesn't block the dashboard
+    authFetch(`/api/admin?action=dash-reviews&userId=${uid}`)
+      .then(r => r.json())
+      .then(d => setReviews(d.reviews || []))
+      .catch(() => setReviews([]));
   }, []);
 
   useEffect(() => {
