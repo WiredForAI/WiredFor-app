@@ -1223,7 +1223,7 @@ function ReviewPrompt({ wfId, result }) {
         <>
           <input
             type="text"
-            placeholder="Your current job title (optional)"
+            placeholder="Your current job title (optional, e.g. Senior Engineer)"
             value={jobTitle}
             onChange={e => setJobTitle(e.target.value)}
             style={{
