@@ -1162,6 +1162,7 @@ function ReviewPrompt({ wfId, result }) {
   const storageKey = `wf_reviewed_${wfId}`;
   const [dismissed, setDismissed] = useState(() => !!localStorage.getItem(storageKey));
   const [stars, setStars] = useState(0);
+  const [jobTitle, setJobTitle] = useState(result.resumeData?.currentTitle || "");
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -1179,7 +1180,7 @@ function ReviewPrompt({ wfId, result }) {
           wfId,
           archetype: result.archetype,
           category: result.archetypeCategory || null,
-          jobTitle: result.resumeData?.currentTitle || null,
+          jobTitle: jobTitle.trim() || null,
           stars,
           reviewText: text.trim() || null,
         }),
@@ -1220,6 +1221,18 @@ function ReviewPrompt({ wfId, result }) {
       </div>
       {stars > 0 && (
         <>
+          <input
+            type="text"
+            placeholder="Your current job title (optional)"
+            value={jobTitle}
+            onChange={e => setJobTitle(e.target.value)}
+            style={{
+              width: "100%", background: "#F7F7F5", border: "1px solid rgba(0,0,0,0.08)",
+              borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#0A0A0A",
+              fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif", outline: "none",
+              boxSizing: "border-box", marginBottom: 10,
+            }}
+          />
           <input
             type="text"
             placeholder="Short feedback (optional, 150 chars max)"
