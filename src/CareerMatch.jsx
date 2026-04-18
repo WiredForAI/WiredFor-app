@@ -1159,15 +1159,19 @@ const TAB_DEFS = [
 ];
 
 function ReviewPrompt({ wfId, result }) {
-  const storageKey = `wf_reviewed_${wfId}`;
-  const [dismissed, setDismissed] = useState(() => !!localStorage.getItem(storageKey));
+  const [status, setStatus] = useState("loading"); // loading | none | pending | approved | rejected
   const [stars, setStars] = useState(0);
   const [jobTitle, setJobTitle] = useState(result.resumeData?.currentTitle || "");
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed) return null;
+  useEffect(() => {
+    fetch(`/api/reviews?wfId=${encodeURIComponent(wfId)}`)
+      .then(r => r.json())
+      .then(d => setStatus(d.status || "none"))
+      .catch(() => setStatus("none"));
+  }, [wfId]);
 
   const handleSubmit = async () => {
     if (!stars) return;
@@ -1185,32 +1189,39 @@ function ReviewPrompt({ wfId, result }) {
           reviewText: text.trim() || null,
         }),
       });
-      setSubmitted(true);
-      localStorage.setItem(storageKey, "1");
-      setTimeout(() => setDismissed(true), 2000);
+      setStatus("pending");
     } catch (err) {
       console.error("review submit error:", err);
     }
     setSubmitting(false);
   };
 
-  const handleDismiss = () => {
-    localStorage.setItem(storageKey, "1");
-    setDismissed(true);
-  };
+  if (status === "loading" || dismissed) return null;
 
-  if (submitted) {
+  if (status === "pending") {
     return (
       <div style={{ background: "rgba(0,196,168,0.06)", border: "1px solid rgba(0,196,168,0.18)", borderRadius: 14, padding: "16px 18px", marginBottom: 20, textAlign: "center" }}>
-        <span style={{ fontSize: 14, color: "#00C4A8", fontWeight: 600 }}>Thanks for your feedback!</span>
+        <span style={{ fontSize: 14, color: "#00C4A8", fontWeight: 600 }}>Thanks for your review — it's pending approval.</span>
       </div>
     );
   }
 
+  if (status === "approved") {
+    return (
+      <div style={{ background: "rgba(0,196,168,0.06)", border: "1px solid rgba(0,196,168,0.18)", borderRadius: 14, padding: "16px 18px", marginBottom: 20, textAlign: "center" }}>
+        <span style={{ fontSize: 14, color: "#00C4A8", fontWeight: 600 }}>Your review has been published.</span>
+      </div>
+    );
+  }
+
+  // status === "none" or "rejected" — show the form
+
   return (
     <div style={{ background: "rgba(107,79,255,0.04)", border: "1px solid rgba(107,79,255,0.14)", borderRadius: 14, padding: "18px 18px 16px", marginBottom: 20, position: "relative" }}>
-      <button onClick={handleDismiss} style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#9B9B9B", fontSize: 18, cursor: "pointer", lineHeight: 1, padding: 2 }}>×</button>
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#0A0A0A", marginBottom: 8 }}>How accurate was your profile?</div>
+      <button onClick={() => setDismissed(true)} style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#9B9B9B", fontSize: 18, cursor: "pointer", lineHeight: 1, padding: 2 }}>×</button>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#0A0A0A", marginBottom: 8 }}>
+        {status === "rejected" ? "Your previous review wasn't published — try again?" : "How accurate was your profile?"}
+      </div>
       <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
         {[1, 2, 3, 4, 5].map(i => (
           <button key={i} onClick={() => setStars(i)} style={{

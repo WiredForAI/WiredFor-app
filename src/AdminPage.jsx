@@ -1283,8 +1283,9 @@ function ReviewsTab({ reviews, onRefresh }) {
   const [acting, setActing] = useState(null);
 
   const filtered = reviews.filter(r => {
-    if (filter === "pending") return !r.approved;
+    if (filter === "pending") return r.approved === null;
     if (filter === "approved") return r.approved === true;
+    if (filter === "rejected") return r.approved === false;
     return true;
   });
 
@@ -1306,14 +1307,14 @@ function ReviewsTab({ reviews, onRefresh }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {["pending", "approved", "all"].map(f => (
+        {["pending", "approved", "rejected", "all"].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             background: filter === f ? ACCENT : "rgba(0,0,0,0.04)",
             color: filter === f ? "#fff" : MUTED,
             border: "none", borderRadius: 8, padding: "6px 16px",
             fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
             textTransform: "capitalize",
-          }}>{f} ({reviews.filter(r => f === "all" ? true : f === "pending" ? !r.approved : r.approved === true).length})</button>
+          }}>{f} ({reviews.filter(r => f === "all" ? true : f === "pending" ? r.approved === null : f === "approved" ? r.approved === true : r.approved === false).length})</button>
         ))}
       </div>
 
@@ -1350,11 +1351,14 @@ function ReviewsTab({ reviews, onRefresh }) {
                   <span style={{ fontSize: 11, color: MUTED2, fontFamily: SANS }}>
                     {new Date(r.created_at).toLocaleDateString()}
                   </span>
-                  {r.approved && (
+                  {r.approved === true && (
                     <span style={{ fontSize: 10, color: ACCENT, fontWeight: 700, fontFamily: SANS }}>APPROVED</span>
                   )}
+                  {r.approved === false && (
+                    <span style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, fontFamily: SANS }}>REJECTED</span>
+                  )}
                   <div style={{ flex: 1 }} />
-                  {!r.approved && (
+                  {r.approved !== true && (
                     <button
                       onClick={() => handleAction(r.id, "approve-review")}
                       disabled={acting === r.id}
@@ -1364,7 +1368,7 @@ function ReviewsTab({ reviews, onRefresh }) {
                       }}
                     >Approve</button>
                   )}
-                  {r.approved && (
+                  {r.approved !== false && (
                     <button
                       onClick={() => handleAction(r.id, "reject-review")}
                       disabled={acting === r.id}

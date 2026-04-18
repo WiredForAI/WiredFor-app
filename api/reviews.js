@@ -9,10 +9,30 @@ const supabase = createClient(
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
-  // GET — fetch approved reviews (public, no auth)
+  // GET — fetch approved reviews (public) or single candidate's review status
   if (req.method === "GET") {
     if (rateLimit(req, res, "reviews-get", 30, 60_000)) return;
 
+    const { wfId } = req.query || {};
+
+    // If wfId provided, return that candidate's review status
+    if (wfId) {
+      const { data, error } = await supabase
+        .from("candidate_reviews")
+        .select("id, approved, stars, review_text, job_title")
+        .eq("wf_id", wfId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return res.status(500).json({ error: error.message });
+      if (!data) return res.status(200).json({ status: "none" });
+
+      // approved: null = pending, true = approved, false = rejected
+      const status = data.approved === true ? "approved" : data.approved === false ? "rejected" : "pending";
+      return res.status(200).json({ status, review: data });
+    }
+
+    // Otherwise return all approved reviews for landing page
     const { data, error } = await supabase
       .from("candidate_reviews")
       .select("wf_id, archetype, category, job_title, stars, review_text, created_at")
@@ -62,7 +82,7 @@ export default async function handler(req, res) {
           archetype,
           category: category || null,
           job_title: jobTitle || null,
-          approved: false,
+          approved: null,
           created_at: new Date().toISOString(),
         })
         .eq("wf_id", wfId);
@@ -80,7 +100,7 @@ export default async function handler(req, res) {
         job_title: jobTitle || null,
         stars,
         review_text: reviewText || null,
-        approved: false,
+        approved: null,
       });
 
     if (insertErr) return res.status(500).json({ error: insertErr.message });
