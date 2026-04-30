@@ -1401,6 +1401,7 @@ function PendingRolesTab({ roles, userId, onRefresh }) {
   const [acting, setActing] = useState(null);
   const [rejectModal, setRejectModal] = useState(null); // roleId or null
   const [rejectReason, setRejectReason] = useState("");
+  const [previewRole, setPreviewRole] = useState(null);
 
   const handleApprove = async (roleId) => {
     setActing(roleId);
@@ -1462,6 +1463,13 @@ function PendingRolesTab({ roles, userId, onRefresh }) {
                   <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
+                        onClick={() => setPreviewRole(r)}
+                        style={{
+                          background: "rgba(107,79,255,0.08)", color: PURPLE, border: "none", borderRadius: 6,
+                          padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        }}
+                      >View</button>
+                      <button
                         onClick={() => handleApprove(r.id)}
                         disabled={acting === r.id}
                         style={{
@@ -1520,6 +1528,141 @@ function PendingRolesTab({ roles, userId, onRefresh }) {
                 disabled={acting === rejectModal}
                 style={{ ...primaryBtn, background: "#DC2626" }}
               >{acting === rejectModal ? "Rejecting…" : "Reject Role"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role preview modal */}
+      {previewRole && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+          overflowY: "auto",
+        }} onClick={() => setPreviewRole(null)}>
+          <div style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
+            padding: "28px 24px", width: "100%", maxWidth: 560, boxShadow: SHADOW,
+            maxHeight: "90vh", overflowY: "auto",
+          }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: ACCENT, fontFamily: SANS, marginBottom: 6 }}>{previewRole.companyName}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: TEXT, fontFamily: SANS }}>{previewRole.title}</div>
+                {previewRole.team && <div style={{ fontSize: 13, color: MUTED, fontFamily: SANS, marginTop: 2 }}>{previewRole.team}</div>}
+              </div>
+              <button onClick={() => setPreviewRole(null)} style={{ background: "none", border: "none", fontSize: 22, color: MUTED2, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* Meta row */}
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
+              {previewRole.workType && (
+                <div style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>
+                  <span style={{ color: MUTED2, textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 10, fontWeight: 600 }}>Work Type </span>
+                  {previewRole.workType}
+                </div>
+              )}
+              {previewRole.location && (
+                <div style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>
+                  <span style={{ color: MUTED2, textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 10, fontWeight: 600 }}>Location </span>
+                  {previewRole.location}
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>
+                <span style={{ color: MUTED2, textTransform: "uppercase", letterSpacing: "0.06em", fontSize: 10, fontWeight: 600 }}>Submitted </span>
+                {new Date(previewRole.createdAt).toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Description */}
+            {previewRole.description && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED2, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Description</div>
+                <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.7, margin: 0, fontFamily: SANS, whiteSpace: "pre-wrap" }}>{previewRole.description}</p>
+              </div>
+            )}
+
+            {/* Culture Tags */}
+            {previewRole.cultureTags && previewRole.cultureTags.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED2, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Culture Tags</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {previewRole.cultureTags.map(tag => (
+                    <span key={tag} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, background: "rgba(0,196,168,0.08)", color: ACCENT, fontWeight: 500, fontFamily: SANS }}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Traits */}
+            {previewRole.traits && previewRole.traits.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED2, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Traits</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {previewRole.traits.map(trait => (
+                    <span key={trait} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, background: "rgba(107,79,255,0.08)", color: PURPLE, fontWeight: 500, fontFamily: SANS }}>{trait}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ideal OCEAN */}
+            {previewRole.idealOcean && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED2, fontWeight: 600, marginBottom: 10, fontFamily: SANS }}>Ideal OCEAN Profile</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[
+                    { key: "openness", label: "O", color: "#F55D2C" },
+                    { key: "conscientiousness", label: "C", color: "#FFBE0B" },
+                    { key: "extraversion", label: "E", color: "#00C4A8" },
+                    { key: "agreeableness", label: "A", color: "#6B4FFF" },
+                    { key: "neuroticism", label: "N", color: "#FF6B89" },
+                  ].map(({ key, label, color }) => {
+                    const val = previewRole.idealOcean[key] ?? previewRole.idealOcean[label] ?? 0;
+                    return (
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 14, fontSize: 11, fontWeight: 700, color, fontFamily: SANS }}>{label}</div>
+                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "rgba(0,0,0,0.06)" }}>
+                          <div style={{ width: `${val}%`, height: "100%", borderRadius: 3, background: color, transition: "width 0.3s" }} />
+                        </div>
+                        <div style={{ width: 24, fontSize: 11, color: MUTED, fontFamily: SANS, textAlign: "right" }}>{val}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Intake Data */}
+            {previewRole.intakeData && Object.keys(previewRole.intakeData).length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED2, fontWeight: 600, marginBottom: 8, fontFamily: SANS }}>Intake Data</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {Object.entries(previewRole.intakeData).map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", gap: 8, fontSize: 13, fontFamily: SANS }}>
+                      <span style={{ color: MUTED2, minWidth: 120, flexShrink: 0 }}>{k.replace(/_/g, " ")}:</span>
+                      <span style={{ color: TEXT }}>{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 16, borderTop: `1px solid ${BORDER}` }}>
+              <button onClick={() => setPreviewRole(null)} style={ghostBtn}>Close</button>
+              <button
+                onClick={() => { handleApprove(previewRole.id); setPreviewRole(null); }}
+                disabled={acting === previewRole.id}
+                style={primaryBtn}
+              >Approve</button>
+              <button
+                onClick={() => { setRejectModal(previewRole.id); setPreviewRole(null); setRejectReason(""); }}
+                style={{ ...primaryBtn, background: "#DC2626" }}
+              >Reject</button>
             </div>
           </div>
         </div>
