@@ -1,4 +1,10 @@
 import { getAuthUser, rateLimit, cors } from "./_lib/auth.js";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
@@ -135,6 +141,107 @@ Rules:
 
   try {
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // ── Roles regeneration (non-blocking enhancement) ──────────────────────
+    // After resume analysis succeeds, regenerate the roles array to reflect
+    // both personality AND actual work experience.
+    const rd = parsed.resumeData;
+    if (rd) {
+      (async () => {
+        try {
+          // Look up candidate by auth user
+          const { data: candidate } = await supabase
+            .from("candidates")
+            .select("wf_id, roles")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (!candidate?.wf_id) {
+            console.log("[analyze-resume] Roles regen skipped — no candidate found for user", user.id);
+            return;
+          }
+
+          const existingRoles = (candidate.roles || []).map(r => r.title || r);
+
+          const rolesPrompt = `You are a career advisor for a personality-based hiring platform. Generate 4 updated role recommendations that reflect BOTH this candidate's personality profile AND their actual work experience.
+
+Candidate Profile:
+- Archetype: ${archetype}
+- OCEAN: O:${ocean.openness} C:${ocean.conscientiousness} E:${ocean.extraversion} A:${ocean.agreeableness} N:${ocean.neuroticism}
+- Operating Style: ${operatingStyle || ""}
+- Current Title: ${rd.currentTitle || "Unknown"}
+- Industry: ${rd.industry || "Unknown"}
+- Years Experience: ${rd.yearsExperience || "Unknown"}
+- Key Skills: ${(rd.skills || []).join(", ") || "None listed"}
+- Background: ${rd.backgroundSummary || ""}
+
+Previous personality-only recommendations (for reference, may be outdated): ${existingRoles.join(", ")}
+
+Generate 4 role recommendations that sit at the intersection of their personality AND experience:
+
+Rules:
+1. At least 2 roles must be directly related to their actual industry and experience
+2. At least 1 role can be a personality-driven stretch or pivot that leverages their OCEAN profile
+3. Each role must be realistic given their years of experience
+4. Roles should feel like genuine career moves not random suggestions
+
+Return JSON array only, no other text:
+[
+  {
+    "title": "string",
+    "icon": "emoji",
+    "whyItFits": ["bullet 1 tying experience + personality", "bullet 2", "bullet 3"]
+  }
+]`;
+
+          const rolesRes = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.ANTHROPIC_API_KEY,
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-6",
+              max_tokens: 1500,
+              messages: [{ role: "user", content: rolesPrompt }],
+            }),
+          });
+
+          if (!rolesRes.ok) {
+            console.error("[analyze-resume] Roles regen Claude error:", rolesRes.status);
+            return;
+          }
+
+          const rolesData = await rolesRes.json();
+          const rolesText = rolesData.content?.[0]?.text || "";
+          const rolesJsonMatch = rolesText.match(/\[[\s\S]*\]/);
+          if (!rolesJsonMatch) {
+            console.error("[analyze-resume] Roles regen: no JSON array in response");
+            return;
+          }
+
+          const newRoles = JSON.parse(rolesJsonMatch[0]);
+          const oldTitles = existingRoles.join(", ");
+          const newTitles = newRoles.map(r => r.title).join(", ");
+
+          const { error: updateErr } = await supabase
+            .from("candidates")
+            .update({ roles: newRoles, updated_at: new Date().toISOString() })
+            .eq("wf_id", candidate.wf_id);
+
+          if (updateErr) {
+            console.error("[analyze-resume] Roles regen save error:", updateErr.message);
+          } else {
+            console.log(`[analyze-resume] Roles regenerated for ${candidate.wf_id}: ${oldTitles} → ${newTitles}`);
+          }
+        } catch (err) {
+          console.error("[analyze-resume] Roles regen error:", err.message);
+        }
+      })();
+    }
+
     return res.status(200).json(parsed);
   } catch (err) {
     console.error("JSON parse error:", err.message);
