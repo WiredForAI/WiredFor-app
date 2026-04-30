@@ -95,7 +95,7 @@ function Avatar({ initials, color, size = 40 }) {
   );
 }
 
-function ScoreBadge({ score }) {
+export function ScoreBadge({ score }) {
   const color = score >= 85 ? ACCENT : score >= 70 ? PURPLE : score >= 55 ? AMBER : MUTED2;
   const label = score >= 85 ? "Strong fit" : score >= 70 ? "Good fit" : score >= 55 ? "Possible fit" : "Weak fit";
   return (

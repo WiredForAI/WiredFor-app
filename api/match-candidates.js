@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-function normalizeOcean(ocean) {
+export function normalizeOcean(ocean) {
   if (!ocean) return null;
   if (ocean.O !== undefined) return ocean;
   return {
@@ -18,7 +18,7 @@ function normalizeOcean(ocean) {
   };
 }
 
-function computeRmsScore(candidateOcean, idealOcean) {
+export function computeRmsScore(candidateOcean, idealOcean) {
   if (!candidateOcean || !idealOcean) return 0;
   const keys = ["O", "C", "E", "A", "N"];
   const sumSqDiff = keys.reduce((sum, k) => {
