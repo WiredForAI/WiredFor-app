@@ -142,25 +142,26 @@ Rules:
   try {
     const parsed = JSON.parse(jsonMatch[0]);
 
-    // ── Roles regeneration (non-blocking enhancement) ──────────────────────
+    // ── Roles regeneration (awaited before response) ──────────────────────
     // After resume analysis succeeds, regenerate the roles array to reflect
     // both personality AND actual work experience.
     const rd = parsed.resumeData;
     if (rd) {
-      (async () => {
-        try {
-          // Look up candidate by auth user
-          const { data: candidate } = await supabase
-            .from("candidates")
-            .select("wf_id, roles")
-            .eq("user_id", user.id)
-            .limit(1)
-            .maybeSingle();
+      let regenWfId = "unknown";
+      try {
+        // Look up candidate by auth user
+        const { data: candidate } = await supabase
+          .from("candidates")
+          .select("wf_id, roles")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
 
-          if (!candidate?.wf_id) {
-            console.log("[analyze-resume] Roles regen skipped — no candidate found for user", user.id);
-            return;
-          }
+        if (!candidate?.wf_id) {
+          console.log("[analyze-resume] Roles regen skipped — no candidate found for user", user.id);
+        } else {
+          regenWfId = candidate.wf_id;
+          console.log(`[analyze-resume] Starting roles regen for ${regenWfId}`);
 
           const existingRoles = (candidate.roles || []).map(r => r.title || r);
 
@@ -210,16 +211,14 @@ Return JSON array only, no other text:
           });
 
           if (!rolesRes.ok) {
-            console.error("[analyze-resume] Roles regen Claude error:", rolesRes.status);
-            return;
+            throw new Error(`Claude API ${rolesRes.status}`);
           }
 
           const rolesData = await rolesRes.json();
           const rolesText = rolesData.content?.[0]?.text || "";
           const rolesJsonMatch = rolesText.match(/\[[\s\S]*\]/);
           if (!rolesJsonMatch) {
-            console.error("[analyze-resume] Roles regen: no JSON array in response");
-            return;
+            throw new Error("No JSON array in Claude response");
           }
 
           const newRoles = JSON.parse(rolesJsonMatch[0]);
@@ -232,14 +231,14 @@ Return JSON array only, no other text:
             .eq("wf_id", candidate.wf_id);
 
           if (updateErr) {
-            console.error("[analyze-resume] Roles regen save error:", updateErr.message);
-          } else {
-            console.log(`[analyze-resume] Roles regenerated for ${candidate.wf_id}: ${oldTitles} → ${newTitles}`);
+            throw new Error(`Supabase update failed: ${updateErr.message}`);
           }
-        } catch (err) {
-          console.error("[analyze-resume] Roles regen error:", err.message);
+
+          console.log(`[analyze-resume] Roles regenerated for ${regenWfId}: ${oldTitles} → ${newTitles}`);
         }
-      })();
+      } catch (err) {
+        console.error(`[analyze-resume] Roles regen failed for ${regenWfId}: ${err.message} — resume upload still succeeded`);
+      }
     }
 
     return res.status(200).json(parsed);
