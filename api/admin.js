@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   // ── POST approve ───────────────────────────────────────────────────────────
   if (req.method === "POST" && action === "approve") {
     const { roleId, userId } = req.body;
-    if (!roleId || !userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    if (!roleId || !userId) return res.status(400).json({ error: "Missing roleId or userId" });
 
     const { error } = await supabase
       .from("employer_roles")
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
   // ── POST reject ────────────────────────────────────────────────────────────
   if (req.method === "POST" && action === "reject") {
     const { roleId, userId, reason } = req.body;
-    if (!roleId || !userId || !(await verifyAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    if (!roleId || !userId) return res.status(400).json({ error: "Missing roleId or userId" });
 
     const { error } = await supabase
       .from("employer_roles")
