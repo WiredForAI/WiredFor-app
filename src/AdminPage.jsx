@@ -1588,7 +1588,7 @@ export default function AdminPage() {
       .then(d => setReviews(d.reviews || []))
       .catch(() => setReviews([]));
     // Fetch pending roles separately
-    authFetch(`/api/admin?action=dash-roles&userId=${uid}`)
+    authFetch(`/api/admin?action=queue&userId=${uid}`)
       .then(r => r.json())
       .then(d => setPendingRoles((d.roles || []).filter(r => r.status === "pending")))
       .catch(() => setPendingRoles([]));
