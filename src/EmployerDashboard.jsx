@@ -1926,7 +1926,7 @@ export default function EmployerDashboard() {
             <span style={{ fontSize: 11, color: MUTED2, fontFamily: SANS }}>WiredFor<span style={{ color: ACCENT }}>.ai</span></span>
           </div>
           <button
-            onClick={() => { supabase.auth.signOut(); window.location.href = "/"; }}
+            onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem("careermatch_result"); localStorage.removeItem("careermatch_wf_id"); window.location.href = "/"; }}
             style={{
               background: "none", border: "none", color: MUTED2, fontSize: 12,
               cursor: "pointer", fontFamily: SANS, padding: "10px 12px", width: "100%",
