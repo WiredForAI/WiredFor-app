@@ -483,5 +483,53 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true });
   }
 
+  // ── GET dash-active-roles ─────────────────────────────────────────────────
+  if (req.method === "GET" && action === "dash-active-roles") {
+    const { data: roles, error } = await supabase
+      .from("employer_roles")
+      .select("id, title, work_type, location, reviewed_at, employers(company_name)")
+      .eq("status", "approved")
+      .eq("active", true)
+      .order("reviewed_at", { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Count intros per role
+    const { data: intros } = await supabase
+      .from("intros")
+      .select("role_id");
+
+    const introCounts = {};
+    (intros || []).forEach(i => {
+      if (i.role_id) introCounts[i.role_id] = (introCounts[i.role_id] || 0) + 1;
+    });
+
+    const result = (roles || []).map(r => ({
+      id: r.id,
+      title: r.title,
+      workType: r.work_type,
+      location: r.location,
+      reviewedAt: r.reviewed_at,
+      companyName: r.employers?.company_name || "Unknown",
+      introCount: introCounts[r.id] || 0,
+    }));
+
+    return res.status(200).json({ roles: result });
+  }
+
+  // ── POST deactivate-role ────────────────────────────────────────────────
+  if (req.method === "POST" && action === "deactivate-role") {
+    const { roleId } = req.body;
+    if (!roleId) return res.status(400).json({ error: "Missing roleId" });
+
+    const { error } = await supabase
+      .from("employer_roles")
+      .update({ active: false })
+      .eq("id", roleId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ success: true });
+  }
+
   return res.status(405).json({ error: "Method or action not allowed" });
 }

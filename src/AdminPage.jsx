@@ -1396,6 +1396,84 @@ function ReviewsTab({ reviews, onRefresh }) {
   );
 }
 
+// ── Active Roles Tab ─────────────────────────────────────────────────────
+function ActiveRolesTab({ roles, userId, onRefresh }) {
+  const [acting, setActing] = useState(null);
+
+  const handleDeactivate = async (roleId) => {
+    setActing(roleId);
+    try {
+      await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deactivate-role", roleId }),
+      });
+      onRefresh();
+    } catch (err) {
+      console.error("deactivate role error:", err);
+    }
+    setActing(null);
+  };
+
+  return (
+    <div>
+      {roles.length === 0 ? (
+        <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS, padding: "40px 0", textAlign: "center" }}>
+          No active roles.
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: SANS, fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                {["Company", "Role", "Work Type", "Location", "Approved", "Intros", ""].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "10px 12px", fontSize: 11, color: MUTED2, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map(r => (
+                <tr key={r.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <td style={{ padding: "12px", fontWeight: 600, color: TEXT }}>{r.companyName}</td>
+                  <td style={{ padding: "12px", color: TEXT }}>{r.title}</td>
+                  <td style={{ padding: "12px", color: MUTED }}>{r.workType || "—"}</td>
+                  <td style={{ padding: "12px", color: MUTED }}>{r.location || "—"}</td>
+                  <td style={{ padding: "12px", color: MUTED2, fontSize: 12 }}>{r.reviewedAt ? new Date(r.reviewedAt).toLocaleDateString() : "—"}</td>
+                  <td style={{ padding: "12px" }}>
+                    {r.introCount > 0 ? (
+                      <span style={{ fontSize: 12, fontWeight: 700, color: ACCENT, fontFamily: SANS }}>{r.introCount}</span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: MUTED2 }}>0</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        style={{
+                          background: "rgba(107,79,255,0.08)", color: PURPLE, border: "none", borderRadius: 6,
+                          padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        }}
+                      >See Matches</button>
+                      <button
+                        onClick={() => handleDeactivate(r.id)}
+                        disabled={acting === r.id}
+                        style={{
+                          background: "rgba(220,38,38,0.08)", color: "#DC2626", border: "none", borderRadius: 6,
+                          padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        }}
+                      >{acting === r.id ? "..." : "Deactivate"}</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Pending Roles Tab ────────────────────────────────────────────────────
 function PendingRolesTab({ roles, userId, onRefresh }) {
   const [acting, setActing] = useState(null);
@@ -1682,6 +1760,7 @@ export default function AdminPage() {
   const [intros, setIntros] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [pendingRoles, setPendingRoles] = useState([]);
+  const [activeRoles, setActiveRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showConnect, setShowConnect]       = useState(false);
   const [showSimulate, setShowSimulate]     = useState(false);
@@ -1735,6 +1814,11 @@ export default function AdminPage() {
       .then(r => r.json())
       .then(d => setPendingRoles((d.roles || []).filter(r => r.status === "pending")))
       .catch(() => setPendingRoles([]));
+    // Fetch active roles separately
+    authFetch(`/api/admin?action=dash-active-roles&userId=${uid}`)
+      .then(r => r.json())
+      .then(d => setActiveRoles(d.roles || []))
+      .catch(() => setActiveRoles([]));
   }, []);
 
   useEffect(() => {
@@ -1896,6 +1980,7 @@ export default function AdminPage() {
             { id: "intros", label: `Intros${intros.length ? ` (${intros.length})` : ""}` },
             { id: "reviews", label: `Reviews${reviews.length ? ` (${reviews.length})` : ""}` },
             { id: "pending-roles", label: `Pending Roles${pendingRoles.length ? ` (${pendingRoles.length})` : ""}` },
+            { id: "active-roles", label: `Active Roles${activeRoles.length ? ` (${activeRoles.length})` : ""}` },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               background: "none", border: "none", cursor: "pointer",
@@ -1927,6 +2012,9 @@ export default function AdminPage() {
               )}
               {tab === "pending-roles" && (
                 <PendingRolesTab roles={pendingRoles} userId={userId} onRefresh={() => load(userId)} />
+              )}
+              {tab === "active-roles" && (
+                <ActiveRolesTab roles={activeRoles} userId={userId} onRefresh={() => load(userId)} />
               )}
             </>
           )}
