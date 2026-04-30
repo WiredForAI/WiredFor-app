@@ -2005,10 +2005,13 @@ export default function EmployerDashboard() {
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 13, color: MUTED2, marginBottom: 20, fontFamily: SANS }}>
-                    {matchLoading
-                      ? "Analyzing candidates for this role..."
-                      : `${matchedCandidates.length} matched · sorted by fit score`}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 18, fontWeight: 400, fontFamily: SERIF, color: TEXT }}>Matches for: {activeRole.title}</div>
+                    <div style={{ fontSize: 13, color: MUTED2, marginTop: 6, fontFamily: SANS }}>
+                      {matchLoading
+                        ? "Analyzing candidates for this role..."
+                        : `${matchedCandidates.length} candidates · sorted by fit score`}
+                    </div>
                   </div>
 
                   {matchFallback && !matchLoading && (
