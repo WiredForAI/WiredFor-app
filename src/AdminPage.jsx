@@ -1397,8 +1397,223 @@ function ReviewsTab({ reviews, onRefresh }) {
 }
 
 // ── Active Roles Tab ─────────────────────────────────────────────────────
+function MatchScoreBadge({ score }) {
+  const color = score >= 85 ? ACCENT : score >= 70 ? PURPLE : score >= 55 ? "#FFBE0B" : MUTED2;
+  const label = score >= 85 ? "Strong fit" : score >= 70 ? "Good fit" : score >= 55 ? "Possible" : "Weak";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ fontSize: 20, fontWeight: 700, color, fontFamily: SANS }}>{score}</div>
+      <div style={{ fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color, fontWeight: 600, fontFamily: SANS }}>{label}</div>
+    </div>
+  );
+}
+
+function MatchResultsModal({ matchRole, matches, matchLoading, matchError, matchFallback, introMap, userId, onClose, onRefresh }) {
+  const [introSent, setIntroSent] = useState({});
+
+  const handleIntro = async (candidate) => {
+    try {
+      await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "connect",
+          userId,
+          employerId: matchRole.employerId,
+          roleId: matchRole.id,
+          candidateWfId: candidate.wf_id,
+          notes: `AI fit score: ${candidate.fit_score}`,
+        }),
+      });
+      setIntroSent(prev => ({ ...prev, [candidate.wf_id]: true }));
+    } catch (err) {
+      console.error("intro error:", err);
+    }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+      backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+      zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      overflowY: "auto",
+    }} onClick={onClose}>
+      <div style={{
+        background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
+        padding: "28px 24px", width: "100%", maxWidth: 640, boxShadow: SHADOW,
+        maxHeight: "90vh", overflowY: "auto",
+      }} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: ACCENT, fontFamily: SANS, marginBottom: 4 }}>{matchRole.companyName}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: TEXT, fontFamily: SANS }}>{matchRole.title}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={onRefresh} style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "4px 10px", fontSize: 11, color: MUTED, cursor: "pointer", fontFamily: SANS }}>Refresh</button>
+            <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUTED2, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+        </div>
+
+        {matchFallback && (
+          <div style={{ background: "rgba(255,190,11,0.08)", border: "1px solid rgba(255,190,11,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#B8860B", fontFamily: SANS }}>
+            AI scoring unavailable, showing compatibility scores
+          </div>
+        )}
+
+        {/* Loading */}
+        {matchLoading && (
+          <div style={{ textAlign: "center", padding: "60px 0" }}>
+            <div style={{ width: 20, height: 20, border: "2px solid rgba(0,196,168,0.2)", borderTopColor: ACCENT, borderRadius: "50%", margin: "0 auto 14px", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ fontSize: 14, color: MUTED, fontFamily: SANS }}>Analyzing candidates...</div>
+            <div style={{ fontSize: 12, color: MUTED2, marginTop: 6, fontFamily: SANS }}>Scoring personality, trajectory, and culture fit</div>
+          </div>
+        )}
+
+        {/* Error */}
+        {matchError && !matchLoading && (
+          <div style={{ color: ORANGE, fontSize: 13, padding: 16, background: "rgba(245,93,44,0.05)", borderRadius: 10, border: "1px solid rgba(245,93,44,0.15)", fontFamily: SANS }}>
+            {matchError}
+          </div>
+        )}
+
+        {/* Empty */}
+        {!matchLoading && !matchError && matches.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 0", color: MUTED2, fontFamily: SANS }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>◌</div>
+            <div style={{ fontSize: 14 }}>No candidates scored 40+ for this role</div>
+          </div>
+        )}
+
+        {/* Results */}
+        {!matchLoading && matches.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ fontSize: 12, color: MUTED2, fontFamily: SANS }}>{matches.length} candidates · sorted by fit score</div>
+            {matches.map((c, i) => {
+              const existingIntro = introMap[c.wf_id];
+              const sent = introSent[c.wf_id];
+              const employerRequested = existingIntro?.requested_by === "employer";
+              return (
+                <div key={c.wf_id} style={{ background: "#fff", border: `1px solid ${BORDER}`, borderRadius: 14, padding: "18px 18px 16px", position: "relative" }}>
+                  {i === 0 && (
+                    <div style={{ position: "absolute", top: 12, right: 14, fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: ACCENT, background: "rgba(0,196,168,0.10)", padding: "3px 8px", borderRadius: 4, fontFamily: SANS }}>Top Match</div>
+                  )}
+                  {employerRequested && (
+                    <div style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: PURPLE, background: "rgba(107,79,255,0.08)", padding: "3px 10px", borderRadius: 4, fontFamily: SANS, fontWeight: 600, marginBottom: 10, display: "inline-block" }}>Employer Requested</div>
+                  )}
+
+                  {/* Top row: ID, archetype, score */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: TEXT, fontFamily: SANS }}>{c.wf_id}</span>
+                      <span style={{ fontSize: 12, color: MUTED, fontFamily: SANS, marginLeft: 8 }}>{c.archetype || ""}</span>
+                    </div>
+                    <MatchScoreBadge score={c.fit_score} />
+                  </div>
+
+                  {/* Score breakdown bars */}
+                  {c.ocean_score != null && c.trajectory_score != null && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                      {[
+                        { label: "OCEAN", val: c.ocean_score, color: ACCENT },
+                        { label: "Trajectory", val: c.trajectory_score, color: PURPLE },
+                        { label: "Culture", val: c.culture_score, color: "#FFBE0B" },
+                      ].map(s => (
+                        <div key={s.label} style={{ flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <span style={{ fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: MUTED2, fontFamily: SANS }}>{s.label}</span>
+                            <span style={{ fontSize: 10, color: s.color, fontWeight: 700, fontFamily: SANS }}>{s.val}</span>
+                          </div>
+                          <div style={{ height: 4, borderRadius: 2, background: "rgba(0,0,0,0.06)" }}>
+                            <div style={{ height: "100%", borderRadius: 2, background: s.color, width: `${s.val}%`, transition: "width 0.3s" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Match reason */}
+                  {c.match_reason && (
+                    <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.65, margin: "0 0 12px", fontFamily: SANS }}>{c.match_reason}</p>
+                  )}
+
+                  {/* Strengths + watch outs */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
+                    {(c.top_strengths || []).map(s => (
+                      <span key={s} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 6, background: "rgba(0,196,168,0.08)", color: ACCENT, fontFamily: SANS }}>{s}</span>
+                    ))}
+                    {(c.watch_outs || []).map(w => (
+                      <span key={w} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 6, background: "rgba(255,190,11,0.10)", color: "#B8860B", fontFamily: SANS }}>{w}</span>
+                    ))}
+                  </div>
+
+                  {/* Intro button */}
+                  {sent || existingIntro ? (
+                    <span style={{ fontSize: 12, color: ACCENT, fontWeight: 600, fontFamily: SANS }}>{sent ? "Intro Sent" : "Intro Exists"}</span>
+                  ) : (
+                    <button
+                      onClick={() => handleIntro(c)}
+                      style={{
+                        background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
+                        padding: "6px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                      }}
+                    >Send Intro</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ActiveRolesTab({ roles, userId, onRefresh }) {
   const [acting, setActing] = useState(null);
+  const [matchRole, setMatchRole] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchError, setMatchError] = useState(null);
+  const [matchFallback, setMatchFallback] = useState(false);
+  const [introMap, setIntroMap] = useState({});
+  const matchCacheRef = useRef({});
+
+  const handleSeeMatches = async (role, forceRefresh = false) => {
+    if (!forceRefresh && matchCacheRef.current[role.id]) {
+      const cached = matchCacheRef.current[role.id];
+      setMatchRole(cached.role);
+      setMatches(cached.candidates);
+      setMatchFallback(cached.fallback);
+      setIntroMap(cached.introMap);
+      setMatchError(null);
+      return;
+    }
+    setMatchRole({ id: role.id, title: role.title, companyName: role.companyName });
+    setMatches([]);
+    setMatchLoading(true);
+    setMatchError(null);
+    setMatchFallback(false);
+    setIntroMap({});
+    try {
+      const res = await authFetch("/api/fit-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roleId: role.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Scoring failed");
+      setMatchRole(data.role);
+      setMatches(data.candidates || []);
+      setMatchFallback(!!data.fallback);
+      setIntroMap(data.introMap || {});
+      matchCacheRef.current[role.id] = data;
+    } catch (err) {
+      setMatchError(err.message);
+    }
+    setMatchLoading(false);
+  };
 
   const handleDeactivate = async (roleId) => {
     setActing(roleId);
@@ -1449,6 +1664,7 @@ function ActiveRolesTab({ roles, userId, onRefresh }) {
                   <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
+                        onClick={() => handleSeeMatches(r)}
                         style={{
                           background: "rgba(107,79,255,0.08)", color: PURPLE, border: "none", borderRadius: 6,
                           padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
@@ -1469,6 +1685,19 @@ function ActiveRolesTab({ roles, userId, onRefresh }) {
             </tbody>
           </table>
         </div>
+      )}
+      {matchRole && (
+        <MatchResultsModal
+          matchRole={matchRole}
+          matches={matches}
+          matchLoading={matchLoading}
+          matchError={matchError}
+          matchFallback={matchFallback}
+          introMap={introMap}
+          userId={userId}
+          onClose={() => setMatchRole(null)}
+          onRefresh={() => { delete matchCacheRef.current[matchRole.id]; handleSeeMatches(matchRole, true); }}
+        />
       )}
     </div>
   );

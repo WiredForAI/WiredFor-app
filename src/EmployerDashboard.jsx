@@ -138,10 +138,28 @@ function OceanBars({ ocean }) {
   );
 }
 
-function CandidateDrawer({ candidate, role, onClose }) {
+function CandidateDrawer({ candidate, role, onClose, employerId }) {
   const [aiInsight, setAiInsight] = useState("");
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [introRequested, setIntroRequested] = useState(false);
+  const [introLoading, setIntroLoading] = useState(false);
+
+  const handleRequestIntro = async () => {
+    if (!employerId || !role?.id || !candidate?.wfId) return;
+    setIntroLoading(true);
+    try {
+      await authFetch("/api/employer-intro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employerId, roleId: role.id, candidateWfId: candidate.wfId }),
+      });
+      setIntroRequested(true);
+    } catch (err) {
+      console.error("intro request error:", err);
+    }
+    setIntroLoading(false);
+  };
 
   useEffect(() => { setTimeout(() => setVisible(true), 50); }, []);
 
@@ -274,7 +292,21 @@ Keep it under 200 words total.`,
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        {employerId && (
+          <div style={{ marginTop: 20, marginBottom: 12 }}>
+            {introRequested ? (
+              <div style={{ fontSize: 13, color: ACCENT, fontWeight: 600, fontFamily: SANS, textAlign: "center", padding: "12px 0" }}>Intro Requested</div>
+            ) : (
+              <button onClick={handleRequestIntro} disabled={introLoading} style={{
+                width: "100%", padding: "12px", borderRadius: 10, cursor: introLoading ? "default" : "pointer",
+                background: ACCENT, border: "none", color: "#fff",
+                fontSize: 13, fontWeight: 700, fontFamily: SANS,
+              }}>{introLoading ? "Requesting..." : "Request Intro"}</button>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: employerId ? 0 : 20 }}>
           <button style={{
             flex: 1, padding: "12px", borderRadius: 10, cursor: "pointer",
             background: candidate.color, border: "none", color: "#fff",
@@ -1074,7 +1106,7 @@ function RoleDetailsDrawer({ role, userId, onApproved, onRejected, onClose }) {
   );
 }
 
-function AdminQueueView({ userId }) {
+function AdminQueueView({ userId, onViewMatches }) {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1217,6 +1249,16 @@ function AdminQueueView({ userId }) {
                           }}
                         >Reject</button>
                       </>
+                    )}
+                    {role.status === "approved" && onViewMatches && (
+                      <button
+                        onClick={() => onViewMatches(role.id)}
+                        style={{
+                          padding: "8px 18px", borderRadius: 8, cursor: "pointer",
+                          background: "rgba(107,79,255,0.08)", border: "1px solid rgba(107,79,255,0.25)",
+                          color: PURPLE, fontSize: 12, fontWeight: 600, fontFamily: SANS,
+                        }}
+                      >See Matches</button>
                     )}
                     <button
                       onClick={() => setSelectedRole(role)}
@@ -1858,7 +1900,10 @@ export default function EmployerDashboard() {
       </div>
 
       {/* Main — queue or normal content */}
-      {showQueue ? <AdminQueueView userId={user?.id} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {showQueue ? <AdminQueueView userId={user?.id} onViewMatches={(roleId) => {
+        const r = roles.find(x => x.id === roleId);
+        if (r) { setShowQueue(false); setActiveRole(r); setTab("candidates"); }
+      }} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{
@@ -2049,6 +2094,7 @@ export default function EmployerDashboard() {
           candidate={selectedCandidate}
           role={activeRole}
           onClose={() => setSelectedCandidate(null)}
+          employerId={employer?.id}
         />
       )}
 
