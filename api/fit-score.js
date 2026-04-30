@@ -178,6 +178,22 @@ Only include candidates with fit_score >= 40. Sort by fit_score descending.`,
       console.log(`[fit-score] DEBUG ${c.wf_id}: EXCLUDED by Claude (rmsScore=${c.rmsScore} resume_industry=${rd?.industry || "none"} resume_title=${rd?.currentTitle || "none"})`);
     });
 
+    // Enrich AI results with candidate profile data for frontend rendering
+    const enriched = aiResults.map(c => {
+      const orig = scored.find(s => s.wf_id === c.wf_id);
+      return {
+        ...c,
+        archetype: orig?.archetype || "",
+        archetypeCategory: orig?.archetype_category || null,
+        operatingStyle: orig?.operating_style || "",
+        ocean: orig?.normalizedOcean || null,
+        watchOuts: Array.isArray(orig?.watch_outs) ? orig.watch_outs : [],
+        cultureFit: orig?.culture_fit || "",
+        roles: orig?.roles || [],
+        workPreference: orig?.work_preference || null,
+      };
+    });
+
     return res.status(200).json({
       role: {
         id: role.id,
@@ -185,26 +201,34 @@ Only include candidates with fit_score >= 40. Sort by fit_score descending.`,
         companyName: role.employers?.company_name || "Unknown",
         employerId: role.employers?.id || role.employer_id,
       },
-      candidates: aiResults,
+      candidates: enriched,
       fallback: false,
       introMap,
     });
   } catch (err) {
     console.error("[fit-score] Falling back to RMS:", err.message);
 
-    // Fallback: return RMS-only results
+    // Fallback: return RMS-only results with profile data
     const fallbackResults = scored
       .filter(c => c.rmsScore >= 40)
       .map(c => ({
         wf_id: c.wf_id,
         fit_score: c.rmsScore,
         ocean_score: c.rmsScore,
+        experience_score: null,
         trajectory_score: null,
         culture_score: null,
         match_reason: `OCEAN compatibility score of ${c.rmsScore} based on personality profile alignment.`,
         top_strengths: [],
         watch_outs: [],
         archetype: c.archetype,
+        archetypeCategory: c.archetype_category || null,
+        operatingStyle: c.operating_style || "",
+        ocean: c.normalizedOcean || null,
+        watchOuts: Array.isArray(c.watch_outs) ? c.watch_outs : [],
+        cultureFit: c.culture_fit || "",
+        roles: c.roles || [],
+        workPreference: c.work_preference || null,
       }));
 
     return res.status(200).json({

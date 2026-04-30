@@ -1641,16 +1641,19 @@ export default function EmployerDashboard() {
   }, []);
 
   // ── AI match candidates whenever active role changes ──
+  const [matchFallback, setMatchFallback] = useState(false);
   useEffect(() => {
     if (!activeRole) return;
     if (matchCache.current[activeRole.id]) {
-      setMatchedCandidates(matchCache.current[activeRole.id]);
+      setMatchedCandidates(matchCache.current[activeRole.id].candidates);
+      setMatchFallback(matchCache.current[activeRole.id].fallback);
       return;
     }
     setMatchLoading(true);
     setMatchError(null);
+    setMatchFallback(false);
     setMatchedCandidates([]);
-    authFetch("/api/match-candidates", {
+    authFetch("/api/fit-score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roleId: activeRole.id }),
@@ -1660,14 +1663,40 @@ export default function EmployerDashboard() {
         if (data.error) throw new Error(data.error);
         const candidates = (data.candidates || []).map((c, i) => ({
           ...c,
+          wfId: c.wf_id,
+          matchScore: c.fit_score,
           color: COLORS[i % COLORS.length],
-          initials: c.wfId ? c.wfId.replace("WF-", "").slice(0, 2) : "??",
+          initials: c.wf_id ? c.wf_id.replace("WF-", "").slice(0, 2) : "??",
           tags: getTopTags(c.ocean),
         }));
-        matchCache.current[activeRole.id] = candidates;
+        const fallback = !!data.fallback;
+        matchCache.current[activeRole.id] = { candidates, fallback };
         setMatchedCandidates(candidates);
+        setMatchFallback(fallback);
       })
-      .catch(err => setMatchError(err.message))
+      .catch(err => {
+        // Fallback to old match-candidates if fit-score fails entirely
+        setMatchFallback(true);
+        return authFetch("/api/match-candidates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roleId: activeRole.id }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.error) throw new Error(data.error);
+            const candidates = (data.candidates || []).map((c, i) => ({
+              ...c,
+              matchScore: c.matchScore,
+              color: COLORS[i % COLORS.length],
+              initials: c.wfId ? c.wfId.replace("WF-", "").slice(0, 2) : "??",
+              tags: getTopTags(c.ocean),
+            }));
+            matchCache.current[activeRole.id] = { candidates, fallback: true };
+            setMatchedCandidates(candidates);
+          })
+          .catch(err2 => setMatchError(err2.message));
+      })
       .finally(() => setMatchLoading(false));
   }, [activeRole?.id]);
 
@@ -1970,9 +1999,15 @@ export default function EmployerDashboard() {
                 <>
                   <div style={{ fontSize: 13, color: MUTED2, marginBottom: 20, fontFamily: SANS }}>
                     {matchLoading
-                      ? "Running AI matching..."
+                      ? "Analyzing candidates for this role..."
                       : `${matchedCandidates.length} matched · sorted by fit score`}
                   </div>
+
+                  {matchFallback && !matchLoading && (
+                    <div style={{ background: "rgba(255,190,11,0.08)", border: "1px solid rgba(255,190,11,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#B8860B", fontFamily: SANS }}>
+                      Showing compatibility scores — AI scoring unavailable
+                    </div>
+                  )}
 
                   {matchError && (
                     <div style={{ color: ORANGE, fontSize: 13, padding: 16, background: "rgba(245,93,44,0.05)", borderRadius: 10, border: "1px solid rgba(245,93,44,0.15)", fontFamily: SANS }}>
@@ -1982,7 +2017,7 @@ export default function EmployerDashboard() {
 
                   {matchLoading && (
                     <div style={{ display: "flex", gap: 12, alignItems: "center", color: MUTED2, fontSize: 13, fontFamily: SANS }}>
-                      <Spinner color={ACCENT} size={16} /> Scoring candidates against this role...
+                      <Spinner color={ACCENT} size={16} /> Scoring personality, experience, and culture fit...
                     </div>
                   )}
 
@@ -1995,15 +2030,14 @@ export default function EmployerDashboard() {
                   )}
 
                   {!matchLoading && matchedCandidates.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                       {matchedCandidates.map((c, i) => (
                         <div
-                          key={c.id}
+                          key={c.wfId || c.wf_id || i}
                           onClick={() => setSelectedCandidate(c)}
                           style={{
                             background: BG, border: `1px solid ${BORDER}`, borderRadius: 14,
                             padding: "20px 24px", cursor: "pointer", transition: "all 0.2s",
-                            display: "flex", alignItems: "center", gap: 18,
                             position: "relative", overflow: "hidden", boxShadow: SHADOW,
                           }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = `${c.color}44`; e.currentTarget.style.background = BG2; }}
@@ -2016,29 +2050,44 @@ export default function EmployerDashboard() {
                               color: ACCENT, background: "rgba(0,196,168,0.10)", padding: "3px 8px", borderRadius: 4, fontFamily: SANS,
                             }}>Top Match</div>
                           )}
-                          <Avatar initials={c.initials} color={c.color} size={44} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
-                              <span style={{ fontWeight: 700, fontSize: 15, color: TEXT, fontFamily: SANS }}>{c.wfId}</span>
-                              <span style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>{c.archetype}</span>
-                              {getCandidateArchetypeCategory(c) && (
-                                <span style={{ fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: PURPLE, background: "rgba(107,79,255,0.08)", padding: "2px 7px", borderRadius: 8, fontWeight: 600, fontFamily: SANS }}>
-                                  {getCandidateArchetypeCategory(c)}
-                                </span>
-                              )}
+                          <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: c.match_reason ? 12 : 0 }}>
+                            <Avatar initials={c.initials} color={c.color} size={44} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 700, fontSize: 15, color: TEXT, fontFamily: SANS }}>{c.wfId}</span>
+                                <span style={{ fontSize: 12, color: MUTED, fontFamily: SANS }}>{c.archetype}</span>
+                                {getCandidateArchetypeCategory(c) && (
+                                  <span style={{ fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: PURPLE, background: "rgba(107,79,255,0.08)", padding: "2px 7px", borderRadius: 8, fontWeight: 600, fontFamily: SANS }}>
+                                    {getCandidateArchetypeCategory(c)}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {(c.tags || []).map(tag => (
+                                  <span key={tag} style={{
+                                    fontSize: 10, letterSpacing: 0.5, textTransform: "uppercase",
+                                    padding: "2px 8px", borderRadius: 5, fontFamily: SANS,
+                                    background: `${c.color}0f`, color: c.color,
+                                  }}>{tag}</span>
+                                ))}
+                              </div>
                             </div>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              {c.tags.map(tag => (
-                                <span key={tag} style={{
-                                  fontSize: 10, letterSpacing: 0.5, textTransform: "uppercase",
-                                  padding: "2px 8px", borderRadius: 5, fontFamily: SANS,
-                                  background: `${c.color}0f`, color: c.color,
-                                }}>{tag}</span>
+                            <ScoreBadge score={c.matchScore} />
+                            <span style={{ color: MUTED2, fontSize: 16, marginLeft: 4 }}>›</span>
+                          </div>
+                          {c.match_reason && (
+                            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "0 0 10px", fontFamily: SANS }}>{c.match_reason}</p>
+                          )}
+                          {((c.top_strengths && c.top_strengths.length > 0) || (c.watch_outs && c.watch_outs.length > 0)) && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                              {(c.top_strengths || []).map(s => (
+                                <span key={s} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "rgba(0,196,168,0.08)", color: ACCENT, fontFamily: SANS }}>{s}</span>
+                              ))}
+                              {(c.watch_outs || []).map(w => (
+                                <span key={w} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "rgba(255,190,11,0.10)", color: "#B8860B", fontFamily: SANS }}>{w}</span>
                               ))}
                             </div>
-                          </div>
-                          <ScoreBadge score={c.matchScore} />
-                          <span style={{ color: MUTED2, fontSize: 16, marginLeft: 4 }}>›</span>
+                          )}
                         </div>
                       ))}
                     </div>
