@@ -1396,6 +1396,138 @@ function ReviewsTab({ reviews, onRefresh }) {
   );
 }
 
+// ── Pending Roles Tab ────────────────────────────────────────────────────
+function PendingRolesTab({ roles, userId, onRefresh }) {
+  const [acting, setActing] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null); // roleId or null
+  const [rejectReason, setRejectReason] = useState("");
+
+  const handleApprove = async (roleId) => {
+    setActing(roleId);
+    try {
+      await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", roleId, userId }),
+      });
+      onRefresh();
+    } catch (err) {
+      console.error("approve role error:", err);
+    }
+    setActing(null);
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    setActing(rejectModal);
+    try {
+      await authFetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", roleId: rejectModal, userId, reason: rejectReason.trim() || null }),
+      });
+      setRejectModal(null);
+      setRejectReason("");
+      onRefresh();
+    } catch (err) {
+      console.error("reject role error:", err);
+    }
+    setActing(null);
+  };
+
+  return (
+    <div>
+      {roles.length === 0 ? (
+        <div style={{ color: MUTED2, fontSize: 13, fontFamily: SANS, padding: "40px 0", textAlign: "center" }}>
+          No pending roles to review.
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: SANS, fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                {["Company", "Role", "Work Type", "Location", "Submitted", ""].map(h => (
+                  <th key={h} style={{ textAlign: "left", padding: "10px 12px", fontSize: 11, color: MUTED2, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {roles.map(r => (
+                <tr key={r.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <td style={{ padding: "12px", fontWeight: 600, color: TEXT }}>{r.companyName}</td>
+                  <td style={{ padding: "12px", color: TEXT }}>{r.title}</td>
+                  <td style={{ padding: "12px", color: MUTED }}>{r.workType || "—"}</td>
+                  <td style={{ padding: "12px", color: MUTED }}>{r.location || "—"}</td>
+                  <td style={{ padding: "12px", color: MUTED2, fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "12px", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        onClick={() => handleApprove(r.id)}
+                        disabled={acting === r.id}
+                        style={{
+                          background: ACCENT, color: "#fff", border: "none", borderRadius: 6,
+                          padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        }}
+                      >Approve</button>
+                      <button
+                        onClick={() => { setRejectModal(r.id); setRejectReason(""); }}
+                        disabled={acting === r.id}
+                        style={{
+                          background: "rgba(220,38,38,0.08)", color: "#DC2626", border: "none", borderRadius: 6,
+                          padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SANS,
+                        }}
+                      >Reject</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Reject reason modal */}
+      {rejectModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }} onClick={() => setRejectModal(null)}>
+          <div style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
+            padding: "28px 24px", width: "100%", maxWidth: 420, boxShadow: SHADOW,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, fontFamily: SANS }}>Reject Role</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16, fontFamily: SANS }}>
+              Provide a reason so the employer knows what to fix.
+            </div>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Rejection reason (optional)"
+              rows={3}
+              style={{
+                width: "100%", background: BG2, border: `1px solid ${BORDER}`,
+                borderRadius: 10, padding: "10px 14px", fontSize: 14, color: TEXT,
+                fontFamily: SANS, outline: "none", boxSizing: "border-box",
+                resize: "vertical", marginBottom: 16,
+              }}
+            />
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setRejectModal(null)} style={ghostBtn}>Cancel</button>
+              <button
+                onClick={handleReject}
+                disabled={acting === rejectModal}
+                style={{ ...primaryBtn, background: "#DC2626" }}
+              >{acting === rejectModal ? "Rejecting…" : "Reject Role"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {
   const [userId, setUserId] = useState(null);
@@ -1406,6 +1538,7 @@ export default function AdminPage() {
   const [employers, setEmployers] = useState([]);
   const [intros, setIntros] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [pendingRoles, setPendingRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showConnect, setShowConnect]       = useState(false);
   const [showSimulate, setShowSimulate]     = useState(false);
@@ -1454,6 +1587,11 @@ export default function AdminPage() {
       .then(r => r.json())
       .then(d => setReviews(d.reviews || []))
       .catch(() => setReviews([]));
+    // Fetch pending roles separately
+    authFetch(`/api/admin?action=dash-roles&userId=${uid}`)
+      .then(r => r.json())
+      .then(d => setPendingRoles((d.roles || []).filter(r => r.status === "pending")))
+      .catch(() => setPendingRoles([]));
   }, []);
 
   useEffect(() => {
@@ -1614,6 +1752,7 @@ export default function AdminPage() {
             { id: "employers", label: `Employers${employers.length ? ` (${employers.length})` : ""}` },
             { id: "intros", label: `Intros${intros.length ? ` (${intros.length})` : ""}` },
             { id: "reviews", label: `Reviews${reviews.length ? ` (${reviews.length})` : ""}` },
+            { id: "pending-roles", label: `Pending Roles${pendingRoles.length ? ` (${pendingRoles.length})` : ""}` },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               background: "none", border: "none", cursor: "pointer",
@@ -1642,6 +1781,9 @@ export default function AdminPage() {
               )}
               {tab === "reviews" && (
                 <ReviewsTab reviews={reviews} onRefresh={() => load(userId)} />
+              )}
+              {tab === "pending-roles" && (
+                <PendingRolesTab roles={pendingRoles} userId={userId} onRefresh={() => load(userId)} />
               )}
             </>
           )}
