@@ -151,6 +151,18 @@ Only include candidates with fit_score >= 40. Sort by fit_score descending.`,
 
     const aiResults = JSON.parse(jsonMatch[0]);
 
+    // DEBUG: log full Claude scoring for each candidate
+    console.log("[fit-score] DEBUG roleId:", roleId, "roleTitle:", role.title);
+    console.log("[fit-score] DEBUG candidates scored:", aiResults.length);
+    aiResults.forEach(c => {
+      console.log(`[fit-score] DEBUG ${c.wf_id}: fit=${c.fit_score} ocean=${c.ocean_score} traj=${c.trajectory_score} culture=${c.culture_score} reason="${c.match_reason}" strengths=${JSON.stringify(c.top_strengths)} watchouts=${JSON.stringify(c.watch_outs)}`);
+    });
+    // Also log candidates that were in the RMS pool but not in Claude results
+    const aiWfIds = new Set(aiResults.map(c => c.wf_id));
+    scored.filter(c => !aiWfIds.has(c.wf_id)).forEach(c => {
+      console.log(`[fit-score] DEBUG ${c.wf_id}: EXCLUDED by Claude (rmsScore was ${c.rmsScore})`);
+    });
+
     return res.status(200).json({
       role: {
         id: role.id,
