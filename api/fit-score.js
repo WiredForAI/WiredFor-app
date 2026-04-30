@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   // Fetch all candidates
   const { data: candidates, error: candErr } = await supabase
     .from("candidates")
-    .select("wf_id, archetype, archetype_category, ocean, roles, culture_fit, operating_style, work_preference");
+    .select("wf_id, archetype, archetype_category, ocean, roles, culture_fit, operating_style, work_preference, resume_data");
 
   if (candErr) return res.status(500).json({ error: candErr.message });
 
@@ -80,6 +80,7 @@ export default async function handler(req, res) {
     culture_fit: c.culture_fit,
     operating_style: c.operating_style,
     work_preference: c.work_preference,
+    resume_data: c.resume_data || null,
     rms_score: c.rmsScore,
   }));
 
@@ -104,19 +105,29 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
-        system: `You are an expert talent matcher for a personality-based hiring platform. Score each candidate against the role using three factors:
+        system: `You are an expert talent matcher for a personality-based hiring platform.
 
-1. OCEAN alignment (60%) — how well does the candidate's personality profile match the role's ideal OCEAN profile
+CRITICAL INSTRUCTION: Each candidate includes resume_data containing their actual work history. This is the most important signal. A candidate whose resume_data shows direct experience in the role's field must score significantly higher than one without — regardless of OCEAN gaps.
 
-2. Role trajectory match (25%) — how well do the candidate's recommended career roles align with this specific position
+Specifically:
+- If resume_data.industry or resume_data.currentTitle directly matches the role: experience_score >= 85
+- If resume_data.skills contain role-relevant technical skills: experience_score += 15
+- If candidate has direct experience: fit_score minimum floor of 65 regardless of other factors
+- If candidate has no relevant experience: experience_score = 0, rely on OCEAN and trajectory
 
-3. Culture and environment fit (15%) — how well does the candidate's culture fit and work preferences match the role's culture tags and requirements
+Score each candidate against the role using four factors:
+
+1. Experience match (30%) — does resume_data show direct relevant experience for this role? Industry match, title match, relevant skills
+2. OCEAN alignment (40%) — how well does the candidate's personality profile match the role's ideal OCEAN profile
+3. Role trajectory match (15%) — how well do the candidate's recommended career roles align with this specific position
+4. Culture and environment fit (15%) — how well does the candidate's culture fit and work preferences match the role's culture tags and requirements
 
 Return a JSON array only, no other text:
 [
   {
     "wf_id": "string",
     "fit_score": 0-100,
+    "experience_score": 0-100,
     "ocean_score": 0-100,
     "trajectory_score": 0-100,
     "culture_score": 0-100,
@@ -155,12 +166,16 @@ Only include candidates with fit_score >= 40. Sort by fit_score descending.`,
     console.log("[fit-score] DEBUG roleId:", roleId, "roleTitle:", role.title);
     console.log("[fit-score] DEBUG candidates scored:", aiResults.length);
     aiResults.forEach(c => {
-      console.log(`[fit-score] DEBUG ${c.wf_id}: fit=${c.fit_score} ocean=${c.ocean_score} traj=${c.trajectory_score} culture=${c.culture_score} reason="${c.match_reason}" strengths=${JSON.stringify(c.top_strengths)} watchouts=${JSON.stringify(c.watch_outs)}`);
+      // Find the original candidate to get resume_data
+      const orig = scored.find(s => s.wf_id === c.wf_id);
+      const rd = orig?.resume_data;
+      console.log(`[fit-score] DEBUG ${c.wf_id}: fit=${c.fit_score} exp=${c.experience_score} ocean=${c.ocean_score} traj=${c.trajectory_score} culture=${c.culture_score} resume_industry=${rd?.industry || "none"} resume_title=${rd?.currentTitle || "none"} reason="${c.match_reason}"`);
     });
     // Also log candidates that were in the RMS pool but not in Claude results
     const aiWfIds = new Set(aiResults.map(c => c.wf_id));
     scored.filter(c => !aiWfIds.has(c.wf_id)).forEach(c => {
-      console.log(`[fit-score] DEBUG ${c.wf_id}: EXCLUDED by Claude (rmsScore was ${c.rmsScore})`);
+      const rd = c.resume_data;
+      console.log(`[fit-score] DEBUG ${c.wf_id}: EXCLUDED by Claude (rmsScore=${c.rmsScore} resume_industry=${rd?.industry || "none"} resume_title=${rd?.currentTitle || "none"})`);
     });
 
     return res.status(200).json({

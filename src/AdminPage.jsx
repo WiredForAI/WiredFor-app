@@ -1516,10 +1516,11 @@ function MatchResultsModal({ matchRole, matches, matchLoading, matchError, match
                   {c.ocean_score != null && c.trajectory_score != null && (
                     <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                       {[
+                        { label: "Experience", val: c.experience_score, color: ORANGE },
                         { label: "OCEAN", val: c.ocean_score, color: ACCENT },
                         { label: "Trajectory", val: c.trajectory_score, color: PURPLE },
                         { label: "Culture", val: c.culture_score, color: "#FFBE0B" },
-                      ].map(s => (
+                      ].filter(s => s.val != null).map(s => (
                         <div key={s.label} style={{ flex: 1 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                             <span style={{ fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: MUTED2, fontFamily: SANS }}>{s.label}</span>
