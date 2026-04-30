@@ -170,8 +170,8 @@ function CandidateDrawer({ candidate, role, onClose, employerId }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 1000,
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
           messages: [{
             role: "user",
             content: `You are a talent advisor. Write a sharp, 3-paragraph hiring brief for this candidate applying for ${role.title}. Be specific, direct, and useful — not generic HR speak.
@@ -182,7 +182,7 @@ Match Score: ${candidate.matchScore}%
 Operating Style: ${candidate.operatingStyle}
 Top Traits: ${candidate.tags.join(", ")}
 Watch Outs: ${candidate.watchOuts.join(". ")}
-Culture Fit: ${candidate.cultureFit}
+Culture Fit: ${candidate.cultureFit}${candidate.experience_highlight ? `\nExperience: ${candidate.experience_highlight}` : ""}${candidate.has_direct_experience ? "\nThis candidate has direct industry experience relevant to this role." : ""}
 Role: ${role.title}${role.team ? ` — ${role.team}` : ""}${role.culture.length ? ` · ${role.culture.join(", ")}` : ""}
 
 Format:
