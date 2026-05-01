@@ -191,6 +191,7 @@ export default async function handler(req, res) {
       roleTitle: i.employer_roles?.title || "—",
       candidateWfId: i.candidate_wf_id,
       status: i.status,
+      requestedBy: i.requested_by || null,
       notes: i.notes,
       createdAt: i.created_at,
       updatedAt: i.updated_at,

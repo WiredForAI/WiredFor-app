@@ -188,9 +188,11 @@ function OceanMini({ ocean }) {
 
 function StatusPill({ status }) {
   const map = {
+    pending:   { bg: "rgba(245,158,11,0.15)", color: "#D97706", label: "Employer Requested" },
     requested: { bg: "rgba(245,158,11,0.10)", color: "#F59E0B", label: "Requested" },
     connected: { bg: "rgba(107,79,255,0.10)", color: PURPLE, label: "Connected" },
-    placed: { bg: "rgba(0,196,168,0.10)", color: ACCENT, label: "Placed" },
+    placed:    { bg: "rgba(0,196,168,0.10)", color: ACCENT, label: "Placed" },
+    declined:  { bg: "rgba(220,38,38,0.08)", color: "#DC2626", label: "Declined" },
   };
   const s = map[status] || { bg: "rgba(0,0,0,0.04)", color: MUTED, label: status };
   return (
@@ -1112,6 +1114,8 @@ function EmployersTab({ employers }) {
 // ── Tab: Intros ───────────────────────────────────────────────────────────
 function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
   const [updating, setUpdating] = useState(null);
+  const [declineTarget, setDeclineTarget] = useState(null);
+  const [declineReason, setDeclineReason] = useState("");
 
   const updateStatus = async (introId, status) => {
     setUpdating(introId);
@@ -1124,10 +1128,37 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
     onRefresh();
   };
 
+  const handleDecline = async () => {
+    if (!declineTarget) return;
+    setUpdating(declineTarget);
+    await authFetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update-intro", userId, introId: declineTarget, status: "declined" }),
+    });
+    setUpdating(null);
+    setDeclineTarget(null);
+    setDeclineReason("");
+    onRefresh();
+  };
+
+  // Sort: pending employer requests first, then by date descending
+  const sorted = [...intros].sort((a, b) => {
+    const aPending = a.status === "pending" ? 0 : 1;
+    const bPending = b.status === "pending" ? 0 : 1;
+    if (aPending !== bPending) return aPending - bPending;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  const pendingCount = intros.filter(i => i.status === "pending").length;
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ color: MUTED, fontSize: 13 }}>{intros.length} intro{intros.length !== 1 ? "s" : ""}</span>
+        <span style={{ color: MUTED, fontSize: 13 }}>
+          {intros.length} intro{intros.length !== 1 ? "s" : ""}
+          {pendingCount > 0 && <span style={{ color: "#D97706", fontWeight: 600 }}> · {pendingCount} pending</span>}
+        </span>
         <button onClick={onNewIntro} style={primaryBtn}>+ New Intro</button>
       </div>
       <div style={{ overflowX: "auto" }}>
@@ -1140,9 +1171,14 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
             </tr>
           </thead>
           <tbody>
-            {intros.map((intro, i) => (
-              <tr key={intro.id} style={{ background: "transparent" }}>
-                <td style={tdStyle}><span style={{ color: MUTED }}>{fmt(intro.createdAt)}</span></td>
+            {sorted.map((intro) => (
+              <tr key={intro.id} style={{ background: intro.status === "pending" ? "rgba(245,158,11,0.04)" : "transparent" }}>
+                <td style={tdStyle}>
+                  <span style={{ color: MUTED }}>{fmt(intro.createdAt)}</span>
+                  {intro.status === "pending" && intro.requestedBy === "employer" && (
+                    <div style={{ fontSize: 10, color: "#D97706", fontWeight: 600, marginTop: 3 }}>⚡ Action Needed</div>
+                  )}
+                </td>
                 <td style={tdStyle}><span style={{ color: TEXT, fontWeight: 600 }}>{intro.companyName}</span></td>
                 <td style={tdStyle}><span style={{ color: MUTED }}>{intro.roleTitle}</span></td>
                 <td style={tdStyle}>
@@ -1151,6 +1187,20 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
                 <td style={tdStyle}><StatusPill status={intro.status} /></td>
                 <td style={tdStyle}>
                   <div style={{ display: "flex", gap: 6 }}>
+                    {intro.status === "pending" && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(intro.id, "requested")}
+                          disabled={updating === intro.id}
+                          style={{ ...primaryBtn, fontSize: 11, padding: "3px 10px" }}
+                        >Send Intro</button>
+                        <button
+                          onClick={() => { setDeclineTarget(intro.id); setDeclineReason(""); }}
+                          disabled={updating === intro.id}
+                          style={{ ...ghostBtn, fontSize: 11, padding: "3px 10px", color: "#DC2626", borderColor: "rgba(220,38,38,0.25)" }}
+                        >Decline</button>
+                      </>
+                    )}
                     {intro.status === "requested" && (
                       <button
                         onClick={() => updateStatus(intro.id, "connected")}
@@ -1158,7 +1208,7 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
                         style={{ ...ghostBtn, fontSize: 11, padding: "3px 10px" }}
                       >Mark Connected</button>
                     )}
-                    {intro.status !== "placed" && (
+                    {intro.status !== "placed" && intro.status !== "declined" && intro.status !== "pending" && (
                       <button
                         onClick={() => updateStatus(intro.id, "placed")}
                         disabled={updating === intro.id}
@@ -1175,6 +1225,45 @@ function IntrosTab({ intros, userId, onRefresh, onNewIntro }) {
           </tbody>
         </table>
       </div>
+
+      {/* Decline reason modal */}
+      {declineTarget && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+          zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }} onClick={() => setDeclineTarget(null)}>
+          <div style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16,
+            padding: "28px 24px", width: "100%", maxWidth: 420, boxShadow: SHADOW,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 6, fontFamily: SANS }}>Decline Intro Request</div>
+            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16, fontFamily: SANS }}>
+              Optionally provide a reason for declining.
+            </div>
+            <textarea
+              value={declineReason}
+              onChange={e => setDeclineReason(e.target.value)}
+              placeholder="Reason (optional)"
+              rows={3}
+              style={{
+                width: "100%", background: BG2, border: `1px solid ${BORDER}`,
+                borderRadius: 10, padding: "10px 14px", fontSize: 14, color: TEXT,
+                fontFamily: SANS, outline: "none", boxSizing: "border-box",
+                resize: "vertical", marginBottom: 16,
+              }}
+            />
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setDeclineTarget(null)} style={ghostBtn}>Cancel</button>
+              <button
+                onClick={handleDecline}
+                disabled={updating === declineTarget}
+                style={{ ...primaryBtn, background: "#DC2626" }}
+              >{updating === declineTarget ? "Declining…" : "Decline"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2207,7 +2296,7 @@ export default function AdminPage() {
           {[
             { id: "candidates", label: `Candidates${candidates.length ? ` (${candidates.length})` : ""}` },
             { id: "employers", label: `Employers${employers.length ? ` (${employers.length})` : ""}` },
-            { id: "intros", label: `Intros${intros.length ? ` (${intros.length})` : ""}` },
+            { id: "intros", label: `Intros${intros.filter(i => i.status === "pending").length ? ` (${intros.filter(i => i.status === "pending").length})` : ""}` },
             { id: "reviews", label: `Reviews${reviews.length ? ` (${reviews.length})` : ""}` },
             { id: "pending-roles", label: `Pending Roles${pendingRoles.length ? ` (${pendingRoles.length})` : ""}` },
             { id: "active-roles", label: `Active Roles${activeRoles.length ? ` (${activeRoles.length})` : ""}` },

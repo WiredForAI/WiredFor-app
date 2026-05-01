@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   // Verify the caller owns this employer profile
   const { data: employer } = await supabase
     .from("employers")
-    .select("id, user_id")
+    .select("id, user_id, company_name")
     .eq("id", employerId)
     .single();
 
@@ -57,5 +57,44 @@ export default async function handler(req, res) {
     .single();
 
   if (error) return res.status(500).json({ error: error.message });
+
+  // Send admin email notification for new employer intro request
+  try {
+    const { data: roleData } = await supabase
+      .from("employer_roles")
+      .select("title")
+      .eq("id", roleId)
+      .single();
+
+    const roleName = roleData?.title || "Unknown Role";
+    const company = employer.company_name || "Unknown Company";
+    const timestamp = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "hello@wiredfor.ai",
+        to: process.env.ADMIN_EMAIL,
+        subject: `New Intro Request — ${company} for ${roleName}`,
+        html: `<div style="font-family:sans-serif;color:#333;line-height:1.6;">
+<h2 style="color:#0A0A0A;margin:0 0 16px;">New Intro Request</h2>
+<p><strong>Company:</strong> ${company}</p>
+<p><strong>Role:</strong> ${roleName}</p>
+<p><strong>Candidate:</strong> ${candidateWfId}</p>
+<p><strong>Requested at:</strong> ${timestamp}</p>
+<br/>
+<a href="https://wiredfor.ai/admin" style="display:inline-block;background:#00C4A8;color:#0A0A0A;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">View in Admin Dashboard</a>
+</div>`,
+      }),
+    });
+    console.log(`[employer-intro] Admin notified: ${company} → ${roleName} → ${candidateWfId}`);
+  } catch (emailErr) {
+    console.error("[employer-intro] Admin email failed:", emailErr.message);
+  }
+
   return res.status(200).json({ intro: data });
 }
