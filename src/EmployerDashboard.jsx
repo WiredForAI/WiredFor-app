@@ -504,7 +504,7 @@ function NewRolePanel({ employerId, onSaved, onClose }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }} />
       <div style={{
-        position: "relative", width: 520, height: "100%", background: BG,
+        position: "relative", width: 520, maxWidth: "100vw", height: "100%", background: BG,
         borderLeft: `1px solid ${BORDER}`, padding: "32px 28px 40px", overflowY: "auto",
         transform: visible ? "translateX(0)" : "translateX(100%)",
         transition: "transform 0.35s cubic-bezier(0.16,1,0.3,1)",
@@ -905,7 +905,7 @@ function RejectModal({ role, userId, onRejected, onClose }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }} />
       <div style={{
-        position: "relative", width: 440, background: BG,
+        position: "relative", width: 440, maxWidth: "calc(100vw - 32px)", background: BG,
         border: `1px solid ${BORDER}`, borderRadius: 16, padding: "28px 28px 24px",
         boxShadow: "0 8px 48px rgba(0,0,0,0.12)",
       }}>
@@ -2002,7 +2002,7 @@ export default function EmployerDashboard() {
               <p style={{ color: MUTED2, fontSize: 14, margin: "8px 0 0", fontFamily: SANS }}>Create a role to start matching candidates.</p>
             </div>
           )}
-          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+          <div style={{ display: "flex", gap: 10, marginTop: 4, ...(isMobile && { flexWrap: "wrap", width: "100%" }) }}>
             {activeRole && ["candidates", "role"].map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
                 padding: "8px 16px", borderRadius: 8, cursor: "pointer",
@@ -2011,12 +2011,14 @@ export default function EmployerDashboard() {
                 color: tab === t ? "#fff" : MUTED,
                 fontSize: 12, fontWeight: tab === t ? 700 : 400, fontFamily: SANS,
                 textTransform: "capitalize",
+                ...(isMobile && { flex: 1 }),
               }}>{t}</button>
             ))}
             <button onClick={() => setShowNewRole(true)} style={{
               padding: "8px 16px", borderRadius: 8, cursor: "pointer",
               background: ACCENT, border: "none", color: "#fff",
               fontSize: 12, fontWeight: 700, fontFamily: SANS,
+              ...(isMobile && { width: "100%", marginTop: 2 }),
             }}>+ Add Role</button>
           </div>
         </div>
