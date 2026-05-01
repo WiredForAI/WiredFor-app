@@ -216,7 +216,7 @@ Keep it under 200 words total.`,
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }} />
       <div style={{
-        position: "relative", width: 420, height: "100%", background: BG,
+        position: "relative", width: 420, maxWidth: "100vw", height: "100%", background: BG,
         borderLeft: `1px solid ${BORDER}`, padding: "32px 28px", overflowY: "auto",
         transform: visible ? "translateX(0)" : "translateX(100%)",
         transition: "transform 0.35s cubic-bezier(0.16,1,0.3,1)",
@@ -990,7 +990,7 @@ function RoleDetailsDrawer({ role, userId, onApproved, onRejected, onClose }) {
       <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", justifyContent: "flex-end" }}>
         <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }} />
         <div style={{
-          position: "relative", width: 480, height: "100%", background: BG,
+          position: "relative", width: 480, maxWidth: "100vw", height: "100%", background: BG,
           borderLeft: `1px solid ${BORDER}`, padding: "32px 28px 40px", overflowY: "auto",
           transform: visible ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.35s cubic-bezier(0.16,1,0.3,1)",
@@ -1826,7 +1826,7 @@ export default function EmployerDashboard() {
       <div style={{
         width: 248, background: BG2, borderRight: `1px solid ${BORDER}`,
         display: "flex", flexDirection: "column", padding: "28px 0", flexShrink: 0,
-        ...(isMobile && { width: "100%", borderRight: "none", borderBottom: `1px solid ${BORDER}`, maxHeight: 220, overflowY: "auto", padding: "16px 0" }),
+        ...(isMobile && { width: "100%", borderRight: "none", borderBottom: `1px solid ${BORDER}`, padding: "16px 0" }),
       }}>
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: MUTED2, marginBottom: 4, fontFamily: SANS }}>Platform</div>
