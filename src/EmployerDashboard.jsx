@@ -1810,7 +1810,8 @@ export default function EmployerDashboard() {
     <div style={{
       minHeight: "100vh", background: BG, color: TEXT,
       fontFamily: SANS, display: "flex",
-      ...(isMobile && { flexDirection: "column", maxWidth: "100vw", overflowX: "hidden" }),
+      maxWidth: "100vw", overflowX: "hidden",
+      ...(isMobile && { flexDirection: "column" }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
@@ -1822,11 +1823,23 @@ export default function EmployerDashboard() {
         textarea { font-family: inherit; }
       `}</style>
 
+      {isMobile && (
+        <button
+          onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem("careermatch_result"); localStorage.removeItem("careermatch_wf_id"); window.location.href = "/"; }}
+          style={{
+            position: "fixed", top: 12, right: 16, zIndex: 100,
+            background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
+            color: MUTED2, fontSize: 12, cursor: "pointer", fontFamily: SANS,
+            padding: "4px 10px",
+          }}
+        >Sign Out</button>
+      )}
+
       {/* Sidebar */}
       <div style={{
         width: 248, background: BG2, borderRight: `1px solid ${BORDER}`,
         display: "flex", flexDirection: "column", padding: "28px 0", flexShrink: 0,
-        ...(isMobile && { width: "100%", borderRight: "none", borderBottom: `1px solid ${BORDER}`, padding: "16px 0" }),
+        ...(isMobile && { width: "100%", borderRight: "none", borderBottom: `1px solid ${BORDER}`, padding: "16px 0", overflowX: "hidden" }),
       }}>
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: MUTED2, marginBottom: 4, fontFamily: SANS }}>Platform</div>
@@ -1944,6 +1957,7 @@ export default function EmployerDashboard() {
               background: "none", border: "none", color: MUTED2, fontSize: 12,
               cursor: "pointer", fontFamily: SANS, padding: "10px 12px", width: "100%",
               textAlign: "left", marginTop: 8,
+              ...(isMobile && { display: "none" }),
             }}
           >Sign Out</button>
         </div>
@@ -1953,7 +1967,7 @@ export default function EmployerDashboard() {
       {showQueue ? <AdminQueueView userId={user?.id} onViewMatches={(roleId) => {
         const r = roles.find(x => x.id === roleId);
         if (r) { setShowQueue(false); setActiveRole(r); setTab("candidates"); }
-      }} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", ...(isMobile && { minWidth: 0 }) }}>
+      }} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", ...(isMobile && { minWidth: 0, width: "100%", overflowX: "hidden" }) }}>
 
         {/* Header */}
         <div style={{
@@ -2008,7 +2022,7 @@ export default function EmployerDashboard() {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px" : "28px 32px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px" : "28px 32px", ...(isMobile && { overflowX: "hidden" }) }}>
 
           {tab === "candidates" && (
             <div>
