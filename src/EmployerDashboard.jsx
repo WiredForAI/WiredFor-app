@@ -1827,9 +1827,9 @@ export default function EmployerDashboard() {
         <button
           onClick={async () => { await supabase.auth.signOut(); localStorage.removeItem("careermatch_result"); localStorage.removeItem("careermatch_wf_id"); window.location.href = "/"; }}
           style={{
-            position: "fixed", top: 12, right: 16, zIndex: 100,
+            position: "fixed", top: 8, right: 12, zIndex: 100,
             background: "none", border: `1px solid ${BORDER}`, borderRadius: 6,
-            color: MUTED2, fontSize: 12, cursor: "pointer", fontFamily: SANS,
+            color: MUTED2, fontSize: 11, cursor: "pointer", fontFamily: SANS,
             padding: "4px 10px",
           }}
         >Sign Out</button>
@@ -1973,7 +1973,7 @@ export default function EmployerDashboard() {
         <div style={{
           padding: "24px 32px", borderBottom: `1px solid ${BORDER}`,
           display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-          ...(isMobile && { padding: "20px 16px", flexDirection: "column", gap: 12 }),
+          ...(isMobile && { padding: "40px 16px 20px", flexDirection: "column", gap: 12 }),
         }}>
           {activeRole ? (
             <div>
@@ -2084,7 +2084,7 @@ export default function EmployerDashboard() {
                           onMouseEnter={e => { e.currentTarget.style.borderColor = `${c.color}44`; e.currentTarget.style.background = BG2; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.background = BG; }}
                         >
-                          {i === 0 && (
+                          {i === 0 && !isMobile && (
                             <div style={{
                               position: "absolute", top: 12, right: isMobile ? 12 : 16,
                               fontSize: 9, letterSpacing: 2, textTransform: "uppercase",
