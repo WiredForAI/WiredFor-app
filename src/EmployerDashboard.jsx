@@ -1810,7 +1810,7 @@ export default function EmployerDashboard() {
     <div style={{
       minHeight: "100vh", background: BG, color: TEXT,
       fontFamily: SANS, display: "flex",
-      ...(isMobile && { flexDirection: "column" }),
+      ...(isMobile && { flexDirection: "column", maxWidth: "100vw", overflowX: "hidden" }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
@@ -1846,7 +1846,7 @@ export default function EmployerDashboard() {
           )}
         </div>
 
-        <div style={{ padding: "20px 12px 12px", flex: 1, overflowY: "auto" }}>
+        <div style={{ padding: "20px 12px 12px", flex: 1, overflowY: "auto", ...(isMobile && { minWidth: 0 }) }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 8px", marginBottom: 12 }}>
             <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: MUTED2, fontFamily: SANS }}>Open Roles</div>
             <button
@@ -1953,7 +1953,7 @@ export default function EmployerDashboard() {
       {showQueue ? <AdminQueueView userId={user?.id} onViewMatches={(roleId) => {
         const r = roles.find(x => x.id === roleId);
         if (r) { setShowQueue(false); setActiveRole(r); setTab("candidates"); }
-      }} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      }} /> : <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", ...(isMobile && { minWidth: 0 }) }}>
 
         {/* Header */}
         <div style={{
