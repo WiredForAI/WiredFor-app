@@ -2,6 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { supabase, authFetch } from "./supabaseClient";
 import { ARCHETYPES } from "./archetypes";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
+
 function getCandidateArchetypeCategory(candidate) {
   if (candidate.archetypeCategory) return candidate.archetypeCategory;
   const found = ARCHETYPES.find(a => a.name === candidate.archetype);
@@ -1611,6 +1621,7 @@ function EmployerOnboarding({ userId, email, onComplete }) {
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────
 export default function EmployerDashboard() {
+  const isMobile = useIsMobile();
   const [screen, setScreen] = useState("loading"); // loading | auth | onboarding | dashboard
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1799,6 +1810,7 @@ export default function EmployerDashboard() {
     <div style={{
       minHeight: "100vh", background: BG, color: TEXT,
       fontFamily: SANS, display: "flex",
+      ...(isMobile && { flexDirection: "column" }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
@@ -1814,6 +1826,7 @@ export default function EmployerDashboard() {
       <div style={{
         width: 248, background: BG2, borderRight: `1px solid ${BORDER}`,
         display: "flex", flexDirection: "column", padding: "28px 0", flexShrink: 0,
+        ...(isMobile && { width: "100%", borderRight: "none", borderBottom: `1px solid ${BORDER}`, maxHeight: 220, overflowY: "auto", padding: "16px 0" }),
       }}>
         <div style={{ padding: "0 20px 24px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: MUTED2, marginBottom: 4, fontFamily: SANS }}>Platform</div>
@@ -1946,13 +1959,14 @@ export default function EmployerDashboard() {
         <div style={{
           padding: "24px 32px", borderBottom: `1px solid ${BORDER}`,
           display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+          ...(isMobile && { padding: "20px 16px", flexDirection: "column", gap: 12 }),
         }}>
           {activeRole ? (
             <div>
               {activeRole.team && (
                 <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: MUTED2, marginBottom: 6, fontFamily: SANS }}>{activeRole.team}</div>
               )}
-              <h1 style={{ fontSize: 26, fontWeight: 400, fontFamily: SERIF, color: TEXT, margin: 0 }}>{activeRole.title}</h1>
+              <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 400, fontFamily: SERIF, color: TEXT, margin: 0 }}>{activeRole.title}</h1>
               <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                 {activeRole.culture.map(tag => (
                   <span key={tag} style={{
@@ -1994,7 +2008,7 @@ export default function EmployerDashboard() {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px" : "28px 32px" }}>
 
           {tab === "candidates" && (
             <div>
@@ -2048,7 +2062,7 @@ export default function EmployerDashboard() {
                           onClick={() => setSelectedCandidate(c)}
                           style={{
                             background: BG, border: `1px solid ${BORDER}`, borderRadius: 14,
-                            padding: "20px 24px", cursor: "pointer", transition: "all 0.2s",
+                            padding: isMobile ? "16px" : "20px 24px", cursor: "pointer", transition: "all 0.2s",
                             position: "relative", overflow: "hidden", boxShadow: SHADOW,
                           }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = `${c.color}44`; e.currentTarget.style.background = BG2; }}
@@ -2056,13 +2070,13 @@ export default function EmployerDashboard() {
                         >
                           {i === 0 && (
                             <div style={{
-                              position: "absolute", top: 12, right: 16,
+                              position: "absolute", top: 12, right: isMobile ? 12 : 16,
                               fontSize: 9, letterSpacing: 2, textTransform: "uppercase",
                               color: ACCENT, background: "rgba(0,196,168,0.10)", padding: "3px 8px", borderRadius: 4, fontFamily: SANS,
                             }}>Top Match</div>
                           )}
-                          <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: c.match_reason ? 12 : 0 }}>
-                            <Avatar initials={c.initials} color={c.color} size={44} />
+                          <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 12 : 18, marginBottom: c.match_reason ? 12 : 0, ...(isMobile && { flexWrap: "wrap" }) }}>
+                            <Avatar initials={c.initials} color={c.color} size={isMobile ? 36 : 44} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3, flexWrap: "wrap" }}>
                                 <span style={{ fontWeight: 700, fontSize: 15, color: TEXT, fontFamily: SANS }}>{c.wfId}</span>
