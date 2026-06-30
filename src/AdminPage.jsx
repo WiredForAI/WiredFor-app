@@ -1279,7 +1279,7 @@ function AdminLogin() {
     setErr("");
     const { error } = await supabase.auth.signInWithOtp({
       email: ADMIN_EMAIL,
-      options: { emailRedirectTo: "https://www.wiredfor.ai/admin" },
+      options: { emailRedirectTo: "https://wiredfor.ai/admin" },
     });
     if (error) { setErr(error.message); setSending(false); return; }
     setSent(true);
