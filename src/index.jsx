@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Analytics } from "@vercel/analytics/react";
 import CareerMatch from "./CareerMatch.jsx";
 import EmployerDashboard from "./EmployerDashboard.jsx";
 import AdminPage from "./AdminPage.jsx";
@@ -24,5 +25,6 @@ const App = path.startsWith("/admin")          ? AdminPage
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <App />
+    <Analytics />
   </StrictMode>
 );
