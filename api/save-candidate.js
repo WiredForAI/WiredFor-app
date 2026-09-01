@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getAuthUser, rateLimit, cors, findDangerousContent, validateOcean, isValidEmail } from "./_lib/auth.js";
+import { notifyAssessmentCompleted } from "./_lib/notify-completion.js";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -118,6 +119,28 @@ export default async function handler(req, res) {
   };
 
   try {
+    // Is this the first time we're seeing a completed result for this wf_id?
+    // The row is absent on a fresh completion, and already carries an archetype
+    // on every later save (resume re-analysis, admin edits), so we notify once.
+    // Admin "Simulate" profiles use the TEST- prefix and never notify.
+    const isTestProfile = String(wfId).startsWith("TEST-");
+    let isFirstCompletion = false;
+    try {
+      const { data: existing, error: lookupErr } = await supabase
+        .from("candidates")
+        .select("wf_id, archetype")
+        .eq("wf_id", wfId)
+        .maybeSingle();
+      if (lookupErr) {
+        // Can't tell — stay quiet rather than risk a duplicate notification.
+        console.warn("[save-candidate] completion lookup failed:", lookupErr.message);
+      } else {
+        isFirstCompletion = !isTestProfile && (!existing || !existing.archetype);
+      }
+    } catch (lookupErr) {
+      console.warn("[save-candidate] completion lookup threw:", lookupErr.message);
+    }
+
     // Attempt 1 — full payload including location + work_preference + onboarding flag
     let error = await upsertCandidate({
       ...base,
@@ -136,6 +159,22 @@ export default async function handler(req, res) {
     if (error) {
       console.error("Supabase upsert error:", { code: error.code, message: error.message, details: error.details });
       return res.status(500).json({ error: error.message, code: error.code });
+    }
+
+    // Admin notification — never let an email problem fail the save.
+    if (isFirstCompletion) {
+      try {
+        await notifyAssessmentCompleted({
+          wfId,
+          email: email || null,
+          archetype,
+          archetypeCategory: archetypeCategory || null,
+          location: location || null,
+          workPreference: workPreference || null,
+        });
+      } catch (notifyErr) {
+        console.error("[save-candidate] completion notification failed:", notifyErr.message);
+      }
     }
 
     return res.status(200).json({ success: true });
