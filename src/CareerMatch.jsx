@@ -905,6 +905,101 @@ function PrepTab({ result }) {
 
 // ── GuidedReveal ─────────────────────────────────────────────────────────────
 
+/**
+ * Shown when a candidate finishes the assessment without an account.
+ *
+ * Reveals the archetype — the part that's worth knowing and worth sharing —
+ * and holds the full profile behind signup. The point is that the account
+ * reads as an unlock rather than a toll booth: they've already received
+ * something real before being asked for anything.
+ */
+export function PreviewGate({ result, wfId, onContinue }) {
+  const locked = [
+    "Your full operating style breakdown",
+    "Your Big Five (OCEAN) profile",
+    "3–5 roles matched to how you're wired",
+    "Blind spots to watch for",
+  ];
+
+  return (
+    <div className="wf-reveal wf-reveal-dark">
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+      <style>{globalStyles}</style>
+
+      {/* Wrapper div matters: .wf-reveal-content is a column flex container,
+          so direct children stretch full-width and the category pill would
+          render as a bar. GuidedReveal wraps each step the same way. */}
+      <div className="wf-reveal-content">
+       <div>
+        <div style={{ fontSize: 10, letterSpacing: 5, textTransform: "uppercase", color: "#00C4A8", marginBottom: 20 }}>
+          Your Assessment is Complete
+        </div>
+
+        {result.archetypeCategory && (
+          <div style={{ display: "inline-block", fontSize: 11, letterSpacing: 3, textTransform: "uppercase", color: "#6B4FFF", background: "rgba(107,79,255,0.15)", padding: "5px 14px", borderRadius: 20, fontWeight: 600, marginBottom: 18 }}>
+            {result.archetypeCategory}
+          </div>
+        )}
+
+        <h1 style={{
+          fontFamily: "'DM Serif Display', serif",
+          fontSize: "clamp(42px, 10vw, 64px)",
+          fontWeight: 400,
+          lineHeight: 1.06,
+          letterSpacing: "-1.5px",
+          color: "#FFFFFF",
+          margin: "0 0 16px",
+          animation: "revealScale 0.8s ease both 0.1s",
+        }}>
+          {result.archetype}
+        </h1>
+
+        {result.archetypeTagline && (
+          <div style={{ fontSize: 16, color: "#00C4A8", fontStyle: "italic", fontWeight: 500, marginBottom: 28, lineHeight: 1.5, animation: "revealFadeIn 0.6s ease both 0.4s" }}>
+            {result.archetypeTagline}
+          </div>
+        )}
+
+        {/* What's still behind the account */}
+        <div style={{
+          padding: "20px", background: "rgba(255,255,255,0.05)", borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.08)", marginBottom: 24,
+          animation: "revealFadeIn 0.6s ease both 0.6s",
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 14 }}>
+            Still to unlock
+          </div>
+          {locked.map(item => (
+            <div key={item} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 9 }}>
+              <span style={{ color: "#00C4A8", fontSize: 13, lineHeight: 1.6, flexShrink: 0 }}>+</span>
+              <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.6 }}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onContinue}
+          style={{
+            width: "100%", background: "#00C4A8", color: "#FFFFFF", border: "none",
+            borderRadius: 12, padding: "16px 24px", fontSize: 15, fontWeight: 600,
+            cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.01em",
+            animation: "revealFadeIn 0.6s ease both 0.7s",
+          }}
+        >
+          Create your free account →
+        </button>
+
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: 14, lineHeight: 1.7, animation: "revealFadeIn 0.6s ease both 0.8s" }}>
+          Free, and your results stay yours.
+          <br />
+          Already saved to <span style={{ color: "#00C4A8", fontWeight: 600, letterSpacing: 0.5 }}>{wfId}</span>
+        </div>
+       </div>
+      </div>
+    </div>
+  );
+}
+
 export function GuidedReveal({
   result, step, wfId, onNext, onComplete,
   jobs, jobsLoading, jobsError,
@@ -1390,6 +1485,7 @@ function getInitialState() {
   if (params.get("retake") === "true") {
     localStorage.removeItem("careermatch_result");
     localStorage.removeItem("careermatch_wf_id");
+    localStorage.removeItem("careermatch_pending_result");
     localStorage.removeItem("careermatch_test_mode");
     localStorage.removeItem("has_completed_onboarding");
     window.history.replaceState({}, "", "/assessment");
@@ -1450,6 +1546,24 @@ export default function CareerMatch() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         localStorage.removeItem("careermatch_result");
+
+        // Someone who finished the assessment but hasn't made an account yet —
+        // put them back on their result rather than the start of the funnel.
+        const pending = localStorage.getItem("careermatch_pending_result");
+        if (pending) {
+          try {
+            const parsed = JSON.parse(pending);
+            if (parsed?.archetype) {
+              setPendingResult(parsed);
+              setScreen("preview");
+              return;
+            }
+          } catch (err) {
+            console.warn("[WiredFor.ai] Could not restore pending result:", err.message);
+          }
+          localStorage.removeItem("careermatch_pending_result");
+        }
+
         setScreen("intro");
         return;
       }
@@ -1499,6 +1613,35 @@ export default function CareerMatch() {
         setResult(savedResult);
         setScreen("dashboard");
       } else {
+        // A session exists but there's no candidate row. This is the magic-link
+        // return trip: the visitor finished the assessment, signed up by email,
+        // left the page, and is now back with a session — but the result was
+        // only ever held in localStorage, never saved (signup happened after
+        // the analysis). Rescue the pending result instead of dropping them at
+        // the intro and silently discarding the assessment they just completed.
+        const pending = localStorage.getItem("careermatch_pending_result");
+        if (pending) {
+          try {
+            const parsed = JSON.parse(pending);
+            if (parsed?.archetype) {
+              localStorage.setItem("careermatch_wf_id", wfId);
+              localStorage.setItem("careermatch_result", JSON.stringify(parsed));
+              localStorage.removeItem("careermatch_pending_result");
+              if (parsed.resumeData)  setResumeData(parsed.resumeData);
+              if (parsed.careerPaths) setCareerPaths(parsed.careerPaths);
+              setResult(parsed);
+              setRevealStep(0);
+              setScreen("reveal");
+              // saveToSupabase reads careermatch_result (set just above) and
+              // persists the row that was missing.
+              saveToSupabase(session.user.id, session.user.email, wfId);
+              return;
+            }
+          } catch (err) {
+            console.warn("[WiredFor.ai] Could not restore pending result after sign-in:", err.message);
+          }
+          localStorage.removeItem("careermatch_pending_result");
+        }
         localStorage.removeItem("careermatch_result");
         setScreen("intro");
       }
@@ -1776,8 +1919,15 @@ export default function CareerMatch() {
     localStorage.setItem("careermatch_result", JSON.stringify(enrichedRes));
     setResult(enrichedRes);
     setPendingResult(null);
+    localStorage.removeItem("careermatch_pending_result");
     setScreen("reveal");
     saveToSupabase(userId, email, wfId);
+  };
+
+  // ── Preview gate → auth ────────────────────────────────────────────────────
+  const handlePreviewContinue = () => {
+    window.gtag?.("event", "preview_to_auth");
+    setScreen("auth");
   };
 
   // ── Reveal navigation ──────────────────────────────────────────────────────
@@ -1793,6 +1943,9 @@ export default function CareerMatch() {
   // ── Retake ─────────────────────────────────────────────────────────────────
   const handleRetake = async () => {
     localStorage.removeItem("careermatch_result");
+    // Must clear before signOut — otherwise the next mount finds no session,
+    // restores this stale result, and drops them on the preview gate.
+    localStorage.removeItem("careermatch_pending_result");
     localStorage.removeItem("careermatch_test_mode");
     await supabase.auth.signOut();
     setResult(null);
@@ -2025,8 +2178,13 @@ Rules:
         setScreen("reveal");
         saveToSupabase(session.user.id, session.user.email, wfId);
       } else {
+        // No account yet — show the archetype first, ask for the account after.
+        // Persisted so a refresh or a return trip doesn't cost them the analysis.
+        localStorage.setItem("careermatch_wf_id", wfId);
+        localStorage.setItem("careermatch_pending_result", JSON.stringify(parsed));
         setPendingResult(parsed);
-        setScreen("auth");
+        window.gtag?.("event", "preview_shown");
+        setScreen("preview");
       }
     } catch (err) {
       console.error(`Analysis error (attempt ${attempt}/3):`, err.message);
@@ -2108,6 +2266,8 @@ Rules:
             <button className="cm-primary-btn" onClick={() => {
               const freshId = generateWFId();
               localStorage.setItem("careermatch_wf_id", freshId);
+              localStorage.removeItem("careermatch_pending_result");
+              setPendingResult(null);
               setWfId(freshId);
               console.log("[WiredFor.ai] Starting over with new WF-ID:", freshId);
               window.gtag?.("event", "assessment_started");
@@ -2159,6 +2319,14 @@ Rules:
         )}
       </div>
     </div>
+  );
+
+  if (screen === "preview") return (
+    <PreviewGate
+      result={pendingResult || {}}
+      wfId={localStorage.getItem("careermatch_wf_id") || wfId}
+      onContinue={handlePreviewContinue}
+    />
   );
 
   if (screen === "auth") return (

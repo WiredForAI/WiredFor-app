@@ -110,6 +110,9 @@ const WORK_PREFS = [
 ];
 
 export default function AuthScreen({ wfId, onComplete }) {
+  // authMethod: "magic" (passwordless, primary) | "password" (secondary).
+  // mode only applies to the password path: "signup" | "login".
+  const [authMethod, setAuthMethod] = useState("magic");
   const [mode, setMode] = useState("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,10 +120,37 @@ export default function AuthScreen({ wfId, onComplete }) {
   const [workPreference, setWorkPreference] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Passwordless sign-in. The user leaves the page and returns via the emailed
+  // link with a session established; CareerMatch's mount effect then rehydrates
+  // their pending result. This handler therefore does NOT call onComplete —
+  // there is no session (and no userId) yet on this page load.
+  const handleMagicLink = async () => {
+    if (!email.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          // Return to the assessment route so the SPA boots into CareerMatch.
+          emailRedirectTo: `${window.location.origin}/assessment`,
+          shouldCreateUser: true,
+          data: { user_type: "candidate" },
+        },
+      });
+      if (otpError) throw otpError;
+      setMagicSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) return;
@@ -175,6 +205,8 @@ export default function AuthScreen({ wfId, onComplete }) {
     setResetLoading(false);
   };
 
+  const isPassword = authMethod === "password";
+
   return (
     <div className="auth-container">
       <style>{authStyles}</style>
@@ -184,20 +216,28 @@ export default function AuthScreen({ wfId, onComplete }) {
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "#00C4A8", marginBottom: 16 }}>
-            {mode === "signup" ? "Save Your Results" : "Welcome Back"}
+            {isPassword && mode === "login" ? "Welcome Back" : "Save Your Results"}
           </div>
           <h2 style={{ fontSize: 26, fontWeight: 400, fontFamily: "'DM Serif Display', Georgia, serif", color: "#0A0A0A", margin: "0 0 10px", lineHeight: 1.2 }}>
-            {mode === "signup" ? "Create your account" : "Log in to your account"}
+            {magicSent
+              ? "Check your email"
+              : isPassword
+                ? (mode === "signup" ? "Create your account" : "Log in to your account")
+                : "See your full results"}
           </h2>
           <p style={{ color: "#6B6B6B", fontSize: 14, lineHeight: 1.65, margin: 0 }}>
-            {mode === "signup"
-              ? "Your results will be saved and tied to your permanent WiredFor ID."
-              : "Log in to access your saved profile and results."}
+            {magicSent
+              ? "We just sent you a one-tap sign-in link."
+              : isPassword
+                ? (mode === "signup"
+                    ? "Your results will be saved and tied to your permanent WiredFor ID."
+                    : "Log in to access your saved profile and results.")
+                : "Enter your email and we'll send a one-tap sign-in link — no password to create."}
           </p>
         </div>
 
-        {/* WF ID badge — signup only */}
-        {mode === "signup" && (
+        {/* WF ID badge — hidden on the returning-user login and the sent state */}
+        {!magicSent && !(isPassword && mode === "login") && (
           <div style={{
             background: "#F7F7F5", border: "1px solid rgba(0,196,168,0.15)", borderRadius: 12,
             padding: "14px 16px", marginBottom: 28, display: "flex", alignItems: "center", gap: 14
@@ -214,7 +254,27 @@ export default function AuthScreen({ wfId, onComplete }) {
           </div>
         )}
 
+        {/* Magic-link sent confirmation */}
+        {magicSent && (
+          <div style={{
+            background: "#F7F7F5", border: "1px solid rgba(0,196,168,0.20)", borderRadius: 12,
+            padding: "22px 20px", marginBottom: 20,
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📬</div>
+            <p style={{ color: "#4A4A4A", fontSize: 14, lineHeight: 1.65, margin: "0 0 14px" }}>
+              We sent a sign-in link to <strong style={{ color: "#0A0A0A" }}>{email}</strong>. Open it on this device to see your full results — your assessment is saved and waiting.
+            </p>
+            <button
+              onClick={() => { setMagicSent(false); setError(""); }}
+              style={{ background: "none", border: "none", color: "#00C4A8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: 0 }}
+            >
+              Use a different email
+            </button>
+          </div>
+        )}
+
         {/* Form */}
+        {!magicSent && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
           <input
             className="auth-input"
@@ -222,9 +282,10 @@ export default function AuthScreen({ wfId, onComplete }) {
             placeholder="Email address"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSubmit()}
+            onKeyDown={e => e.key === "Enter" && (isPassword ? handleSubmit() : handleMagicLink())}
             autoComplete="email"
           />
+          {isPassword && (
           <input
             className="auth-input"
             type="password"
@@ -234,7 +295,8 @@ export default function AuthScreen({ wfId, onComplete }) {
             onKeyDown={e => e.key === "Enter" && handleSubmit()}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
           />
-          {mode === "login" && !forgotMode && (
+          )}
+          {isPassword && mode === "login" && !forgotMode && (
             <button
               onClick={() => { setForgotMode(true); setResetEmail(email); setError(""); }}
               style={{ background: "none", border: "none", color: "#00C4A8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: 0, textAlign: "right", marginTop: -4 }}
@@ -243,8 +305,8 @@ export default function AuthScreen({ wfId, onComplete }) {
             </button>
           )}
 
-          {/* Location + work preference — signup only */}
-          {mode === "signup" && (
+          {/* Location + work preference — password signup only */}
+          {isPassword && mode === "signup" && (
             <>
               <input
                 className="auth-input"
@@ -275,6 +337,7 @@ export default function AuthScreen({ wfId, onComplete }) {
             </>
           )}
         </div>
+        )}
 
         {forgotMode && (
           <div style={{
@@ -339,17 +402,49 @@ export default function AuthScreen({ wfId, onComplete }) {
           }}>{error}</div>
         )}
 
-        <button className="auth-btn" onClick={handleSubmit} disabled={loading || !email.trim() || !password.trim()}>
-          {loading ? "Please wait..." : mode === "signup" ? "Create Account & See Results →" : "Log In & See Results →"}
-        </button>
+        {/* Primary action */}
+        {!magicSent && (
+          isPassword ? (
+            <button className="auth-btn" onClick={handleSubmit} disabled={loading || !email.trim() || !password.trim()}>
+              {loading ? "Please wait..." : mode === "signup" ? "Create Account & See Results →" : "Log In & See Results →"}
+            </button>
+          ) : (
+            <button className="auth-btn" onClick={handleMagicLink} disabled={loading || !email.trim()}>
+              {loading ? "Sending..." : "Email me a sign-in link →"}
+            </button>
+          )
+        )}
 
-        {/* Toggle */}
-        <div style={{ marginTop: 20, textAlign: "center", fontSize: 14, color: "#6B6B6B" }}>
-          {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
-          <button className="auth-toggle-btn" onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}>
-            {mode === "signup" ? "Log in" : "Sign up"}
-          </button>
-        </div>
+        {/* Method switch */}
+        {!magicSent && (
+          <div style={{ marginTop: 16, textAlign: "center" }}>
+            {isPassword ? (
+              <button
+                className="auth-toggle-btn"
+                onClick={() => { setAuthMethod("magic"); setForgotMode(false); setError(""); }}
+              >
+                Email me a sign-in link instead
+              </button>
+            ) : (
+              <button
+                className="auth-toggle-btn"
+                onClick={() => { setAuthMethod("password"); setError(""); }}
+              >
+                Prefer to use a password?
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Signup / login toggle — password path only */}
+        {!magicSent && isPassword && !forgotMode && (
+          <div style={{ marginTop: 12, textAlign: "center", fontSize: 14, color: "#6B6B6B" }}>
+            {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
+            <button className="auth-toggle-btn" onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setError(""); }}>
+              {mode === "signup" ? "Log in" : "Sign up"}
+            </button>
+          </div>
+        )}
 
         {/* Skip */}
         <div style={{ marginTop: 16, textAlign: "center" }}>
