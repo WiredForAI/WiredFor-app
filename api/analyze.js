@@ -25,7 +25,16 @@ export default async function handler(req, res) {
       }),
     });
 
-    if (!response.ok) throw new Error(`Claude API ${response.status}`);
+    if (!response.ok) {
+      // Surface Anthropic's actual error so failures are diagnosable instead of
+      // a bare status code. The body carries the real reason (e.g. credit
+      // balance too low, invalid model, rate limit).
+      const detail = await response.text();
+      console.error(`Claude API ${response.status}:`, detail);
+      return res
+        .status(502)
+        .json({ error: `Claude API ${response.status}`, detail });
+    }
 
     const data = await response.json();
     return res.status(200).json(data);
