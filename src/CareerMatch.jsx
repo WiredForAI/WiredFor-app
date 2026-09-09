@@ -1617,31 +1617,44 @@ export default function CareerMatch() {
         // return trip: the visitor finished the assessment, signed up by email,
         // left the page, and is now back with a session — but the result was
         // only ever held in localStorage, never saved (signup happened after
-        // the analysis). Rescue the pending result instead of dropping them at
-        // the intro and silently discarding the assessment they just completed.
+        // the analysis). Rescue it instead of dropping them at the intro and
+        // silently discarding the assessment they just completed.
+        //
+        // Read pending_result first, then fall back to careermatch_result, so
+        // the rescue is IDEMPOTENT. Under React StrictMode (and on any remount)
+        // this effect runs twice; the first pass moves pending → result. Without
+        // the fallback the second pass would find pending already gone, clobber
+        // the just-restored result, and strand the user on the intro — which
+        // also makes the first pass's delayed saveToSupabase abort (no backup).
+        let parsed = null;
         const pending = localStorage.getItem("careermatch_pending_result");
         if (pending) {
-          try {
-            const parsed = JSON.parse(pending);
-            if (parsed?.archetype) {
-              localStorage.setItem("careermatch_wf_id", wfId);
-              localStorage.setItem("careermatch_result", JSON.stringify(parsed));
-              localStorage.removeItem("careermatch_pending_result");
-              if (parsed.resumeData)  setResumeData(parsed.resumeData);
-              if (parsed.careerPaths) setCareerPaths(parsed.careerPaths);
-              setResult(parsed);
-              setRevealStep(0);
-              setScreen("reveal");
-              // saveToSupabase reads careermatch_result (set just above) and
-              // persists the row that was missing.
-              saveToSupabase(session.user.id, session.user.email, wfId);
-              return;
-            }
-          } catch (err) {
-            console.warn("[WiredFor.ai] Could not restore pending result after sign-in:", err.message);
-          }
-          localStorage.removeItem("careermatch_pending_result");
+          try { parsed = JSON.parse(pending); }
+          catch (err) { console.warn("[WiredFor.ai] Could not parse pending result:", err.message); }
         }
+        if (!parsed?.archetype) {
+          const stored = localStorage.getItem("careermatch_result");
+          if (stored) {
+            try { const s = JSON.parse(stored); if (s?.archetype) parsed = s; } catch {}
+          }
+        }
+
+        if (parsed?.archetype) {
+          localStorage.setItem("careermatch_wf_id", wfId);
+          localStorage.setItem("careermatch_result", JSON.stringify(parsed));
+          localStorage.removeItem("careermatch_pending_result");
+          if (parsed.resumeData)  setResumeData(parsed.resumeData);
+          if (parsed.careerPaths) setCareerPaths(parsed.careerPaths);
+          setResult(parsed);
+          setRevealStep(0);
+          setScreen("reveal");
+          // saveToSupabase reads careermatch_result (set just above) and
+          // persists the row that was missing.
+          saveToSupabase(session.user.id, session.user.email, wfId);
+          return;
+        }
+
+        localStorage.removeItem("careermatch_pending_result");
         localStorage.removeItem("careermatch_result");
         setScreen("intro");
       }
