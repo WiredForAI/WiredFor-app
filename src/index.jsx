@@ -9,6 +9,7 @@ import PreviewMode from "./PreviewMode.jsx";
 import JobsPage from "./JobsPage.jsx";
 import ClaimProfile from "./ClaimProfile.jsx";
 import ResetPassword from "./ResetPassword.jsx";
+import LegalPage from "./LegalPage.jsx";
 
 const path = window.location.pathname;
 
@@ -19,6 +20,8 @@ const App = path.startsWith("/admin")          ? AdminPage
   : path.startsWith("/claim")                  ? ClaimProfile
   : path.startsWith("/jobs")                   ? JobsPage
   : path.startsWith("/assessment")             ? CareerMatch
+  : path.startsWith("/privacy")                ? LegalPage
+  : path.startsWith("/terms")                  ? LegalPage
   : path === "/"                               ? LandingPage
   : LandingPage;
 
